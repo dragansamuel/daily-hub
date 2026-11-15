@@ -366,20 +366,34 @@ const $ = id => /** @type {HTMLInputElement} */ (document.getElementById(id));
 const up = (ev, sel) => /** @type {Element} */ (ev.target).closest(sel);
 /** @param {Event} ev */
 const tgt = ev => /** @type {HTMLInputElement} */ (ev.target);
-const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+/** @param {unknown} s */
+const esc = s => String(s).replace(/[&<>"']/g, c => (/** @type {Record<string, string>} */ ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}))[c]);
 const today = () => { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 10); };
+/** @param {string} d @param {number} n */
 const addDays = (d, n) => { const x = new Date(d + 'T12:00'); x.setDate(x.getDate() + n); return x.toISOString().slice(0, 10); };
+/** @param {string} d */
 const ym = d => d.slice(0, 7);
+/** @param {string} m @param {number} by */
 const shiftMonth = (m, by) => { const [y, mo] = m.split('-').map(Number); const d = new Date(y, mo - 1 + by, 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; };
+/** @param {string} m @param {boolean} [long] */
 const monthName = (m, long) => new Date(m + '-01T00:00').toLocaleDateString('ro-RO', long ? {month: 'long', year: 'numeric'} : {month: 'short', year: '2-digit'});
+/** @param {string} d */
 const fmtDate = d => new Date(d + 'T00:00').toLocaleDateString('ro-RO', {weekday: 'short', day: 'numeric', month: 'short', year: 'numeric'});
+/** @param {string} d */
 const shortDate = d => new Date(d + 'T00:00').toLocaleDateString('ro-RO', {day: 'numeric', month: 'short'});
+/** @param {number} n */
 const money = n => n.toLocaleString('ro-RO', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' lei';
+/** @param {number} n */
 const num = n => Number.isInteger(n) ? String(n) : n.toFixed(1);
-function load(key, fallback, check) { try { const v = JSON.parse(localStorage.getItem(key)); if (v && check(v)) return v; } catch {} return fallback(); }
+/** @template T @param {string} key @param {() => T} fallback @param {(v: any) => boolean} check @returns {T} */
+function load(key, fallback, check) { try { const v = JSON.parse(localStorage.getItem(key) || 'null'); if (v && check(v)) return v; } catch {} return fallback(); }
+/** @param {string} key @param {unknown} v */
 function store(key, v) { try { localStorage.setItem(key, JSON.stringify(v)); } catch {} }
+/** @type {ReturnType<typeof setTimeout> | undefined} */
 let toastTimer;
+/** @param {string} msg */
 function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 1800); }
+/** @param {string} name @param {string} text @param {string} type */
 function download(name, text, type) {
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([text], {type})); a.download = name; a.click();
@@ -387,8 +401,20 @@ function download(name, text, type) {
 }
 
 /* ================= Data ================= */
+/** @typedef {{id: number, date: string, amount: number, category: string, note?: string, source?: string}} Expense */
+/** @typedef {{expenses: Expense[], categories: string[]}} BudgetData */
+/** @typedef {{id: number, name: string, servings: number, time?: number | null, cost?: number | null, meal?: string | null,
+ *   tags: string[], ingredients: string[], steps?: string, kid?: string}} Recipe */
+/** @typedef {'b' | 'l' | 'd' | 's'} SlotKey */
+/** @typedef {Record<SlotKey, number | null>} PlanDay */
+/** @typedef {{budget: number, persons: number, reserve: number, snacks: boolean}} Settings */
+/** @typedef {{recipes: Recipe[], picked: Record<string, number>, checked: Record<string, boolean>, settings: Settings,
+ *   plan?: {created: string, days: PlanDay[]}, libVersion?: number}} RecipeData */
+/** @typedef {{qty: number | null, unit: string, name: string}} Ingredient */
+/** @typedef {{key: string, name: string, unit: string, qty: number | null, from: string[]}} ShopItem */
 const K = {budget: 'budget-tracker-v1', food: 'recipe-book-v1'};
 const DEFAULT_CATS = ['Mâncare', 'Transport', 'Locuință', 'Utilități', 'Sănătate', 'Distracție', 'Cumpărături', 'Altele'];
+/** @type {Recipe[]} */
 const SAMPLE_RECIPES = [
   {id: 1, name: 'Spaghete cu roșii și usturoi', servings: 2, time: 20, tags: ['cină', 'vegetarian', 'rapid'],
    ingredients: ['200 g spaghete', '3 căței usturoi', '400 g roșii din conservă', '2 linguri ulei de măsline', '1 linguriță fulgi de chili', 'sare', 'busuioc proaspăt'],
@@ -397,11 +423,13 @@ const SAMPLE_RECIPES = [
    ingredients: ['3 ouă', '1/2 ardei gras', '1 roșie', '30 g brânză', '1 lingură unt', 'sare'],
    steps: '1. Bate ouăle cu un praf de sare.\n2. Călește ardeiul tocat în unt.\n3. Toarnă ouăle, adaugă roșia și brânza, apoi pliază omleta când s-a închegat.'},
 ];
-let B = load(K.budget, () => ({expenses: [], categories: DEFAULT_CATS.slice()}), v => Array.isArray(v.expenses) && Array.isArray(v.categories));
+/** @type {BudgetData} */
+let B = load(K.budget, () => (/** @type {BudgetData} */ ({expenses: [], categories: DEFAULT_CATS.slice()})), v => Array.isArray(v.expenses) && Array.isArray(v.categories));
 /* Healthy, budget-friendly collection for 4 people (2 adults + 2 children).
    cost = estimated lei for all servings (approximate supermarket prices).
    kid = how to make the portion spicy for the child who loves spicy food, without changing it for everyone. */
 const LIB_VERSION = 2;
+/** @type {Recipe[]} */
 const LIBRARY = [
   // ---------- Mic dejun ----------
   {id: 1001, name: 'Terci de ovăz cu banane și scorțișoară', meal: 'mic dejun', servings: 4, time: 10, cost: 12, tags: ['copii', 'vegetarian', 'rapid'],
@@ -569,12 +597,14 @@ const LIBRARY = [
    steps: '1. Taie fructele cubulețe și amestecă-le cu iaurtul și nucile.',
    kid: 'Lasă-l să aleagă fructele și să-și facă singur paharul.'},
 ];
-let R = load(K.food, () => ({recipes: SAMPLE_RECIPES, picked: {}, checked: {}}), v => Array.isArray(v.recipes));
+/** @type {RecipeData} */
+let R = load(K.food, () => (/** @type {RecipeData} */ ({recipes: SAMPLE_RECIPES, picked: {}, checked: {}})), v => Array.isArray(v.recipes));
 R.picked ||= {}; R.checked ||= {};
 const saveB = () => store(K.budget, B), saveR = () => store(K.food, R);
 
 /* ================= Navigation ================= */
 let view = 'home';
+/** @param {string} v */
 function go(v) {
   view = v;
   document.body.dataset.view = v;
@@ -585,7 +615,7 @@ function go(v) {
   try { location.hash = v; } catch {}
 }
 document.addEventListener('click', ev => {
-  const g = up(ev, '[data-go]'); if (g) go(g.dataset.go);
+  const g = up(ev, '[data-go]'); if (g) go(g.dataset.go || 'home');
   const q = up(ev, '[data-quick]');
   if (q) {
     const v = q.dataset.quick;
@@ -607,7 +637,7 @@ function renderHome() {
   const m = ym(today());
   const inM = B.expenses.filter(e => ym(e.date) === m);
   const total = inM.reduce((s, e) => s + e.amount, 0);
-  const byCat = {}; inM.forEach(e => byCat[e.category] = (byCat[e.category] || 0) + e.amount);
+  /** @type {Record<string, number>} */ const byCat = {}; inM.forEach(e => byCat[e.category] = (byCat[e.category] || 0) + e.amount);
   const top = Object.entries(byCat).sort((a, b) => b[1] - a[1]).slice(0, 3);
   $('homeBudget').innerHTML = `<div class="big">${money(total)}</div><div class="line">cheltuiți în ${monthName(m, true)} · ${inM.length} ${inM.length === 1 ? 'cheltuială' : 'cheltuieli'}</div>
     ${top.length ? `<div class="mini">${top.map(([c, v]) => `<div><span>${esc(c)}</span><span class="bar"><i style="width:${(v / top[0][1] * 100).toFixed(0)}%"></i></span></div>`).join('')}</div>` : ''}
@@ -642,7 +672,7 @@ function bRender() {
   const total = inM.reduce((s, e) => s + e.amount, 0);
   const [y, mo] = m.split('-').map(Number);
   const days = m === ym(today()) ? new Date().getDate() : new Date(y, mo, 0).getDate();
-  const byCat = {}; inM.forEach(e => byCat[e.category] = (byCat[e.category] || 0) + e.amount);
+  /** @type {Record<string, number>} */ const byCat = {}; inM.forEach(e => byCat[e.category] = (byCat[e.category] || 0) + e.amount);
   const sorted = Object.entries(byCat).sort((a, b) => b[1] - a[1]);
   const prev = B.expenses.filter(e => ym(e.date) === shiftMonth(m, -1)).reduce((s, e) => s + e.amount, 0);
   const diff = prev ? (total - prev) / prev * 100 : null;
@@ -685,11 +715,12 @@ $('bForm').addEventListener('submit', ev => {
   ev.preventDefault();
   const amount = parseFloat($('bAmount').value);
   if (!(amount > 0)) return;
-  B.expenses.push({id: Date.now(), date: $('bDate').value, amount, category: $('bCat').value, note: $('bNote').value.trim()});
+  const added = {id: Date.now(), date: $('bDate').value, amount, category: $('bCat').value, note: $('bNote').value.trim()};
+  B.expenses.push(added);
   saveB();
   $('bMonth').value = ym($('bDate').value);
   $('bAmount').value = ''; $('bNote').value = ''; $('bAmount').focus();
-  bRender(); toast(`Adăugat: ${money(amount)} la ${B.expenses.at(-1).category}`);
+  bRender(); toast(`Adăugat: ${money(amount)} la ${added.category}`);
 });
 $('bList').addEventListener('click', ev => {
   const id = tgt(ev).dataset.bdel;
@@ -703,7 +734,8 @@ $('bCatForm').addEventListener('submit', ev => {
   $('bNewCat').value = '';
 });
 $('bCats').addEventListener('click', ev => {
-  const i = tgt(ev).dataset.bcat; if (i === undefined) return;
+  const raw = tgt(ev).dataset.bcat; if (raw === undefined) return;
+  const i = Number(raw);
   const name = B.categories[i];
   const used = B.expenses.filter(e => e.category === name).length;
   if (B.categories.length === 1) return toast('Păstrează cel puțin o categorie');
@@ -717,17 +749,24 @@ $('bFilter').addEventListener('change', bRender);
 $('bPrev').onclick = () => { $('bMonth').value = shiftMonth($('bMonth').value || ym(today()), -1); bRender(); };
 $('bNext').onclick = () => { $('bMonth').value = shiftMonth($('bMonth').value || ym(today()), 1); bRender(); };
 $('bCsv').onclick = () => {
+  /** @param {unknown} s */
   const q = s => `"${String(s).replace(/"/g, '""')}"`;
   const lines = ['data,categorie,suma,nota', ...B.expenses.slice().sort((a, b) => a.date.localeCompare(b.date)).map(e => [e.date, q(e.category), e.amount.toFixed(2), q(e.note || '')].join(','))];
   download(`cheltuieli-${today()}.csv`, lines.join('\n'), 'text/csv');
 };
 
 /* ================= RECIPES ================= */
+/** @type {number | null} */
 let rEditing = null;
+/** @type {Record<string, string>} */
 const MEAL_LABEL = {'mic dejun': 'Mic dejun', principal: 'Prânz / cină', gustare: 'Gustare'};
+/** @type {Record<string, number>} */
 const MEAL_ORDER = {'mic dejun': 0, principal: 1, gustare: 2};
-const isSpicy = r => r.tags.some(t => t.toLowerCase().startsWith('picant'));
+/** @param {Recipe | undefined} r */
+const isSpicy = r => !!r && r.tags.some(t => t.toLowerCase().startsWith('picant'));
+/** @param {number} n */
 const lei = n => (Math.round(n * 10) / 10).toLocaleString('ro-RO') + ' lei';
+/** @param {number | string | null | undefined} id @returns {Recipe | undefined} */
 const rById = id => R.recipes.find(r => r.id === Number(id));
 
 /* ---- link with Budget: groceries are recorded as food expenses ---- */
@@ -738,9 +777,12 @@ function foodCategory() {
   B.categories.unshift('Mâncare'); saveB(); bRenderCats();
   return 'Mâncare';
 }
+/** @param {Expense} e */
 const isFood = e => FOOD_CATS.includes(e.category) || e.source === 'retete';
+/** @param {string} month */
 const foodSpent = month => B.expenses.filter(e => ym(e.date) === month && isFood(e)).reduce((s, e) => s + e.amount, 0);
 
+/** @param {string} name */
 function rSub(name) {
   /** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll('#rSeg button')).forEach(b => b.classList.toggle('on', b.dataset.sub === name));
   /** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll('[data-rsub]')).forEach(d => d.classList.toggle('hidden', d.dataset.rsub !== name));
@@ -749,13 +791,13 @@ function rSub(name) {
 $('rSeg').addEventListener('click', ev => {
   const b = up(ev, 'button'); if (!b) return;
   if (b.dataset.sub === 'edit' && rEditing === null) rReset();
-  rSub(b.dataset.sub);
+  rSub(b.dataset.sub || 'browse');
 });
 
 /* adds the recipe collection once, keeps the user's own recipes and edits */
 function rMigrate() {
   R.picked ||= {}; R.checked ||= {};
-  R.settings = {budget: 1750, persons: 4, reserve: 15, snacks: false, ...(R.settings || {})};
+  R.settings = {budget: 1750, persons: 4, reserve: 15, snacks: false, ...(/** @type {Partial<Settings>} */ (R.settings || {}))};
   if ((R.libVersion || 0) < LIB_VERSION) {
     const have = new Set(R.recipes.map(r => r.id));
     LIBRARY.forEach(r => { if (!have.has(r.id)) R.recipes.push(JSON.parse(JSON.stringify(r))); });
@@ -769,6 +811,7 @@ function rMigrate() {
 }
 
 /* ---- ingredient parsing ---- */
+/** @type {Record<string, string>} */
 const UNITS = {g: 'g', gram: 'g', grame: 'g', grams: 'g', kg: 'kg', ml: 'ml', l: 'l', litru: 'l', litri: 'l', liter: 'l', litre: 'l',
   tsp: 'tsp', teaspoon: 'tsp', teaspoons: 'tsp', 'linguriță': 'tsp', 'lingurițe': 'tsp', 'lgț': 'tsp',
   tbsp: 'tbsp', tablespoon: 'tbsp', tablespoons: 'tbsp', 'lingură': 'tbsp', linguri: 'tbsp', lg: 'tbsp',
@@ -776,15 +819,19 @@ const UNITS = {g: 'g', gram: 'g', grame: 'g', grams: 'g', kg: 'kg', ml: 'ml', l:
   clove: 'clove', cloves: 'clove', 'cățel': 'clove', 'căței': 'clove', can: 'can', cans: 'can', 'conservă': 'can', conserve: 'can',
   pinch: 'pinch', praf: 'pinch', slice: 'slice', slices: 'slice', felie: 'slice', felii: 'slice',
   bunch: 'bunch', 'legătură': 'bunch', 'legături': 'bunch', pc: 'pc', pcs: 'pc', buc: 'pc', 'bucată': 'pc', 'bucăți': 'pc'};
+/** @type {Record<string, string[]>} */
 const UNIT_LABEL = {tsp: ['linguriță', 'lingurițe'], tbsp: ['lingură', 'linguri'], cup: ['cană', 'căni'], clove: ['cățel', 'căței'], can: ['conservă', 'conserve'],
   pinch: ['praf', 'prafuri'], slice: ['felie', 'felii'], bunch: ['legătură', 'legături'], pc: ['bucată', 'bucăți']};
+/** @param {string} u @param {number} q */
 const unitLabel = (u, q) => UNIT_LABEL[u] ? UNIT_LABEL[u][q <= 1 ? 0 : 1] : u;
+/** @param {string} s @returns {number} */
 function parseQty(s) {
   s = s.replace(',', '.');
   if (/^\d+\s+\d+\/\d+$/.test(s)) { const [w, f] = s.split(/\s+/); return +w + parseQty(f); }
   if (/^\d+\/\d+$/.test(s)) { const [a, b] = s.split('/'); return +a / +b; }
   return parseFloat(s);
 }
+/** @param {string} line @returns {Ingredient} */
 function parseIngredient(line) {
   const m = line.trim().match(/^(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*([a-zA-ZăâîșțşţĂÂÎȘȚ]+\.?)?\s*(.*)$/);
   if (!m) return {qty: null, unit: '', name: line.trim()};
@@ -794,9 +841,12 @@ function parseIngredient(line) {
   return {qty: parseQty(m[1]), unit, name: name.replace(/^(of|de)\s+/i, '').trim()};
 }
 /* rough Romanian/English singular-plural folding so "1 morcov" and "2 morcovi" merge */
+/** @type {Record<string, string>} */
 const IRREGULAR = {cepe: 'ceapă', mere: 'măr', 'ouă': 'ou'};
+/** @param {string} n */
 const normName = n => n.toLowerCase().replace(/\s+/g, ' ').trim().split(' ')
   .map(w => (IRREGULAR[w] || w).replace(/(uri|ii|ie|es|i|e|ă|a|s)$/, '')).join(' ');
+/** @param {number} q */
 const fmtQty = q => Math.abs(q - Math.round(q)) < 0.01 ? String(Math.round(q)) : String(Math.round(q * 100) / 100).replace('.', ',');
 
 /* ---- browse ---- */
@@ -812,7 +862,7 @@ function rRenderResults() {
       if (spicy && !isSpicy(r)) return false;
       if (cheap && !(r.cost && r.cost / r.servings <= 5)) return false;
       return true;
-    }).sort((a, b) => b.matched.length - a.matched.length || (MEAL_ORDER[a.r.meal] ?? 3) - (MEAL_ORDER[b.r.meal] ?? 3) || a.r.name.localeCompare(b.r.name));
+    }).sort((a, b) => b.matched.length - a.matched.length || (MEAL_ORDER[a.r.meal || ''] ?? 3) - (MEAL_ORDER[b.r.meal || ''] ?? 3) || a.r.name.localeCompare(b.r.name));
   $('rCount').textContent = `${res.length} ${res.length === 1 ? 'rețetă' : 'rețete'}`;
   $('rResults').innerHTML = res.length ? res.map(({r, matched}) => {
     const on = r.id in R.picked;
@@ -836,7 +886,7 @@ function rRenderResults() {
 }
 $('rResults').addEventListener('click', ev => {
   const b = up(ev, 'button[data-ract]'); if (!b) return;
-  const id = Number(b.dataset.id), r = rById(id);
+  const id = Number(b.dataset.id), r = rById(id); if (!r) return;
   if (b.dataset.ract === 'pick') {
     if (id in R.picked) { delete R.picked[id]; toast('Scos de pe lista de cumpărături'); } else { R.picked[id] = R.settings.persons || r.servings; toast('Adăugat pe lista de cumpărături 🛒'); }
     saveR(); rRenderAll();
@@ -847,6 +897,7 @@ $('rResults').addEventListener('click', ev => {
 });
 ['rQIng', 'rQText'].forEach(id => $(id).addEventListener('input', rRenderResults));
 ['rQMode', 'rQMeal', 'rQSpicy', 'rQCheap'].forEach(id => $(id).addEventListener('change', rRenderResults));
+/** @param {number} id */
 function openRecipe(id) {
   const r = rById(id); if (!r) return;
   $('rQIng').value = ''; $('rQMeal').value = ''; $('rQSpicy').checked = false; $('rQCheap').checked = false;
@@ -858,10 +909,11 @@ function openRecipe(id) {
 
 /* ---- add / edit ---- */
 function rReset() { rEditing = null; /** @type {HTMLFormElement} */ (document.getElementById('rForm')).reset(); $('rFormTitle').textContent = 'Adaugă rețetă'; $('rEditTab').textContent = 'Adaugă'; }
+/** @param {Recipe} r */
 function rStartEdit(r) {
   rEditing = r.id;
-  $('rName').value = r.name; $('rServ').value = r.servings; $('rTime').value = r.time || '';
-  $('rMeal').value = r.meal || ''; $('rCost').value = r.cost ?? ''; $('rKid').value = r.kid || '';
+  $('rName').value = r.name; $('rServ').value = String(r.servings); $('rTime').value = String(r.time || '');
+  $('rMeal').value = r.meal || ''; $('rCost').value = String(r.cost ?? ''); $('rKid').value = r.kid || '';
   $('rTags').value = r.tags.join(', '); $('rIngs').value = r.ingredients.join('\n'); $('rSteps').value = r.steps || '';
   $('rFormTitle').textContent = 'Editează rețeta'; $('rEditTab').textContent = 'Editează';
   rSub('edit'); window.scrollTo({top: 0});
@@ -885,32 +937,45 @@ $('rCancel').onclick = () => { rReset(); rSub('browse'); };
 
 /* ---- weekly menu within budget ---- */
 const DAY_NAMES = ['Luni', 'Marți', 'Miercuri', 'Joi', 'Vineri', 'Sâmbătă', 'Duminică'];
+/** @type {[SlotKey, string, string][]} */
 const SLOTS = [['b', 'Mic dejun', 'mic dejun'], ['l', 'Prânz', 'principal'], ['d', 'Cină', 'principal'], ['s', 'Gustare', 'gustare']];
 const activeSlots = () => SLOTS.filter(([k]) => k !== 's' || R.settings.snacks);
+/** @param {Recipe | undefined} r */
 const costFor = r => r && r.cost ? r.cost * R.settings.persons / r.servings : 0;
+/** @param {PlanDay} d */
 const dayCost = d => activeSlots().reduce((t, [k]) => t + costFor(rById(d[k])), 0);
+/** @param {PlanDay[]} days */
 const planCost = days => days.reduce((s, d) => s + dayCost(d), 0);
 const weekTarget = () => R.settings.budget * (1 - R.settings.reserve / 100) * 7 / 30;
+/** @param {string} type */
 const mealPool = type => R.recipes.filter(r => r.meal === type && r.cost);
+/** @template T @param {T[]} a @returns {T[]} */
 const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 const todayIdx = () => (new Date().getDay() + 6) % 7;
 
+/** @param {boolean} silent */
 function generatePlan(silent) {
   const P = {b: mealPool('mic dejun'), l: mealPool('principal'), d: mealPool('principal'), s: mealPool('gustare')};
   if (!P.b.length || P.l.length < 2) { if (!silent) toast('Ai nevoie de rețete cu tip de masă și cost'); return; }
   const target = weekTarget();
+  /** @type {{days: PlanDay[], score: number} | null} */
   let best = null;
   for (let attempt = 0; attempt < 60; attempt++) {
+    /** @type {Record<number, number>} */
     const used = {};
+    /** @param {Recipe[]} list @param {number | null} [avoid] */
     const take = (list, avoid) => {
       const r = shuffle(list).filter(x => x.id !== avoid).sort((a, b) => (used[a.id] || 0) - (used[b.id] || 0))[0];
       if (r) used[r.id] = (used[r.id] || 0) + 1;
       return r ? r.id : null;
     };
-    const days = DAY_NAMES.map(() => { const d = {b: take(P.b)}; d.l = take(P.l); d.d = take(P.d, d.l); d.s = take(P.s); return d; });
-    const uses = id => days.reduce((n, d) => n + ['b', 'l', 'd', 's'].filter(k => d[k] === id).length, 0);
+    /** @type {PlanDay[]} */
+    const days = DAY_NAMES.map(() => { const b = take(P.b), l = take(P.l); return {b, l, d: take(P.d, l), s: take(P.s)}; });
+    /** @param {number} id */
+    const uses = id => days.reduce((n, d) => n + /** @type {SlotKey[]} */ (['b', 'l', 'd', 's']).filter(k => d[k] === id).length, 0);
     // over budget? swap the most expensive meals for cheaper ones (a main can appear at most twice a week)
     for (let guard = 0; planCost(days) > target && guard < 150; guard++) {
+      /** @type {{i: number, k: SlotKey, c: number}[]} */
       const slots = [];
       days.forEach((d, i) => activeSlots().forEach(([k]) => slots.push({i, k, c: costFor(rById(d[k]))})));
       slots.sort((a, b) => b.c - a.c);
@@ -930,6 +995,7 @@ function generatePlan(silent) {
     const score = (cost <= target ? 1000 : -cost) + variety + Math.min(spicyMains, 4);
     if (!best || score > best.score) best = {days, score};
   }
+  if (!best) return;
   R.plan = {created: today(), days: best.days};
   saveR();
   if (!silent) { renderPlan(); renderHome(); toast('Meniu nou generat'); }
@@ -937,7 +1003,7 @@ function generatePlan(silent) {
 
 function renderPlan() {
   const st = R.settings;
-  $('pBudget').value = st.budget; $('pPersons').value = st.persons; $('pReserve').value = st.reserve; $('pSnacks').checked = st.snacks;
+  $('pBudget').value = String(st.budget); $('pPersons').value = String(st.persons); $('pReserve').value = String(st.reserve); $('pSnacks').checked = st.snacks;
   if (!R.plan) { $('pSummary').innerHTML = '<div class="empty">Apasă „Generează alt meniu”.</div>'; $('pDays').innerHTML = ''; return; }
   const week = planCost(R.plan.days), month = week * 30 / 7, reserve = st.budget * st.reserve / 100, total = month + reserve;
   const spent = foodSpent(ym(today())), over = total > st.budget;
@@ -961,9 +1027,10 @@ function renderPlan() {
 $('pDays').addEventListener('click', ev => {
   const sw = up(ev, '[data-swap]');
   if (sw) {
-    const [i, k] = sw.dataset.swap.split('|'), day = R.plan.days[i];
+    const plan = R.plan; if (!plan) return;
+    const [i, key] = (sw.dataset.swap || '').split('|'), k = /** @type {SlotKey} */ (key), day = plan.days[Number(i)];
     const other = k === 'l' ? day.d : k === 'd' ? day.l : null;
-    const alt = shuffle(mealPool(SLOTS.find(s => s[0] === k)[2])).find(r => r.id !== day[k] && r.id !== other);
+    const alt = shuffle(mealPool(/** @type {[SlotKey, string, string]} */ (SLOTS.find(s => s[0] === k))[2])).find(r => r.id !== day[k] && r.id !== other);
     if (alt) { day[k] = alt.id; saveR(); renderPlan(); renderHome(); }
     return;
   }
@@ -982,15 +1049,18 @@ $('pGen').onclick = () => generatePlan(false);
 $('pToShop').onclick = () => {
   if (!R.plan) return;
   if (Object.keys(R.picked).length && !confirm('Înlocuiești lista de cumpărături actuală cu rețetele din meniu?')) return;
+  /** @type {Record<string, number>} */
   const count = {};
-  R.plan.days.forEach(d => activeSlots().forEach(([k]) => { if (rById(d[k])) count[d[k]] = (count[d[k]] || 0) + 1; }));
+  R.plan.days.forEach(d => activeSlots().forEach(([k]) => { const id = d[k]; if (id !== null && rById(id)) count[id] = (count[id] || 0) + 1; }));
   R.picked = {}; R.checked = {};
   for (const [id, n] of Object.entries(count)) R.picked[id] = n * R.settings.persons;
   saveR(); rRenderAll(); rSub('shop'); toast('Meniul săptămânii e pe lista de cumpărături 🛒');
 };
 
 /* ---- shopping list ---- */
+/** @returns {ShopItem[]} */
 function buildShopList() {
+  /** @type {Record<string, {name: string, unit: string, qty: number | null, from: Set<string>}>} */
   const items = {};
   for (const [id, servings] of Object.entries(R.picked)) {
     const r = rById(id); if (!r) continue;
@@ -1005,6 +1075,7 @@ function buildShopList() {
   }
   return Object.entries(items).map(([key, it]) => ({key, ...it, from: [...it.from]})).sort((a, b) => a.name.localeCompare(b.name));
 }
+/** @param {ShopItem} it */
 const itemText = it => (it.qty !== null ? fmtQty(it.qty) + (it.unit ? ' ' + unitLabel(it.unit, it.qty) : '') + ' ' : '') + it.name;
 const shopCost = () => Object.entries(R.picked).reduce((s, [id, sv]) => { const r = rById(id); return s + (r && r.cost ? r.cost * sv / r.servings : 0); }, 0);
 
@@ -1015,7 +1086,7 @@ function rRenderShop() {
   $('rShopCost').textContent = ids.length ? `Cost estimat: ≈ ${lei(est)}` : '';
   if (!$('rBuyAmount').dataset.touched) $('rBuyAmount').value = est ? est.toFixed(2) : '';
   $('rPicked').innerHTML = ids.length ? ids.map(id => {
-    const r = rById(id);
+    const r = /** @type {Recipe} */ (rById(id));
     return `<div class="picked"><strong style="flex:1">${esc(r.name)}</strong><span class="meta">Porții</span>
       <input type="number" min="1" value="${R.picked[id]}" data-serv="${id}"><button class="ghost small danger" data-unpick="${id}">Scoate</button></div>`;
   }).join('') : '<div class="empty">Adaugă rețete din fila Rețete cu „+ Lista de cumpărături” sau din Meniu.</div>';
@@ -1071,7 +1142,7 @@ function rRenderAll() { rRenderResults(); rRenderShop(); renderPlan(); }
 $('exportAll').onclick = () => download(`daily-hub-backup-${today()}.json`, JSON.stringify({app: 'daily-hub', version: 1, budget: B, recipes: R}, null, 2), 'application/json');
 $('importAll').onclick = () => $('importFile').click();
 $('importFile').onchange = async ev => {
-  const file = tgt(ev).files[0]; if (!file) return;
+  const file = tgt(ev).files?.[0]; if (!file) return;
   try {
     const d = JSON.parse(await file.text());
     // accepts a combined backup, or a backup from one of the old single apps
