@@ -360,7 +360,12 @@ details summary{cursor:pointer;color:var(--accent);font-size:14px;font-weight:60
 
 <script>
 /* ================= Shared helpers ================= */
-const $ = id => document.getElementById(id);
+/** @param {string} id @returns {HTMLInputElement} */
+const $ = id => /** @type {HTMLInputElement} */ (document.getElementById(id));
+/** @param {Event} ev @param {string} sel @returns {HTMLElement|null} */
+const up = (ev, sel) => /** @type {Element} */ (ev.target).closest(sel);
+/** @param {Event} ev */
+const tgt = ev => /** @type {HTMLInputElement} */ (ev.target);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const today = () => { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 10); };
 const addDays = (d, n) => { const x = new Date(d + 'T12:00'); x.setDate(x.getDate() + n); return x.toISOString().slice(0, 10); };
@@ -573,15 +578,15 @@ let view = 'home';
 function go(v) {
   view = v;
   document.body.dataset.view = v;
-  document.querySelectorAll('nav.side button').forEach(b => b.classList.toggle('on', b.dataset.go === v));
+  /** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll('nav.side button')).forEach(b => b.classList.toggle('on', b.dataset.go === v));
   document.querySelectorAll('.view').forEach(s => s.classList.toggle('on', s.id === 'view-' + v));
   if (v === 'home') renderHome();
   window.scrollTo({top: 0});
   try { location.hash = v; } catch {}
 }
 document.addEventListener('click', ev => {
-  const g = ev.target.closest('[data-go]'); if (g) go(g.dataset.go);
-  const q = ev.target.closest('[data-quick]');
+  const g = up(ev, '[data-go]'); if (g) go(g.dataset.go);
+  const q = up(ev, '[data-quick]');
   if (q) {
     const v = q.dataset.quick;
     if (v === 'budget') { go('budget'); $('bAmount').focus(); }
@@ -687,7 +692,7 @@ $('bForm').addEventListener('submit', ev => {
   bRender(); toast(`Adăugat: ${money(amount)} la ${B.expenses.at(-1).category}`);
 });
 $('bList').addEventListener('click', ev => {
-  const id = ev.target.dataset.bdel;
+  const id = tgt(ev).dataset.bdel;
   if (!id || !confirm('Ștergi această cheltuială?')) return;
   B.expenses = B.expenses.filter(e => e.id !== Number(id)); saveB(); bRender(); toast('Cheltuială ștearsă');
 });
@@ -698,7 +703,7 @@ $('bCatForm').addEventListener('submit', ev => {
   $('bNewCat').value = '';
 });
 $('bCats').addEventListener('click', ev => {
-  const i = ev.target.dataset.bcat; if (i === undefined) return;
+  const i = tgt(ev).dataset.bcat; if (i === undefined) return;
   const name = B.categories[i];
   const used = B.expenses.filter(e => e.category === name).length;
   if (B.categories.length === 1) return toast('Păstrează cel puțin o categorie');
@@ -737,12 +742,12 @@ const isFood = e => FOOD_CATS.includes(e.category) || e.source === 'retete';
 const foodSpent = month => B.expenses.filter(e => ym(e.date) === month && isFood(e)).reduce((s, e) => s + e.amount, 0);
 
 function rSub(name) {
-  document.querySelectorAll('#rSeg button').forEach(b => b.classList.toggle('on', b.dataset.sub === name));
-  document.querySelectorAll('[data-rsub]').forEach(d => d.classList.toggle('hidden', d.dataset.rsub !== name));
+  /** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll('#rSeg button')).forEach(b => b.classList.toggle('on', b.dataset.sub === name));
+  /** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll('[data-rsub]')).forEach(d => d.classList.toggle('hidden', d.dataset.rsub !== name));
   if (name === 'plan') renderPlan(); // refresh "already spent" with the latest Budget data
 }
 $('rSeg').addEventListener('click', ev => {
-  const b = ev.target.closest('button'); if (!b) return;
+  const b = up(ev, 'button'); if (!b) return;
   if (b.dataset.sub === 'edit' && rEditing === null) rReset();
   rSub(b.dataset.sub);
 });
@@ -830,7 +835,7 @@ function rRenderResults() {
   }).join('') : `<div class="card empty">${R.recipes.length ? 'Nicio rețetă nu se potrivește căutării.' : 'Nicio rețetă încă. Adaugă una cu „Adaugă”.'}</div>`;
 }
 $('rResults').addEventListener('click', ev => {
-  const b = ev.target.closest('button[data-ract]'); if (!b) return;
+  const b = up(ev, 'button[data-ract]'); if (!b) return;
   const id = Number(b.dataset.id), r = rById(id);
   if (b.dataset.ract === 'pick') {
     if (id in R.picked) { delete R.picked[id]; toast('Scos de pe lista de cumpărături'); } else { R.picked[id] = R.settings.persons || r.servings; toast('Adăugat pe lista de cumpărături 🛒'); }
@@ -852,7 +857,7 @@ function openRecipe(id) {
 }
 
 /* ---- add / edit ---- */
-function rReset() { rEditing = null; $('rForm').reset(); $('rFormTitle').textContent = 'Adaugă rețetă'; $('rEditTab').textContent = 'Adaugă'; }
+function rReset() { rEditing = null; /** @type {HTMLFormElement} */ (document.getElementById('rForm')).reset(); $('rFormTitle').textContent = 'Adaugă rețetă'; $('rEditTab').textContent = 'Adaugă'; }
 function rStartEdit(r) {
   rEditing = r.id;
   $('rName').value = r.name; $('rServ').value = r.servings; $('rTime').value = r.time || '';
@@ -954,7 +959,7 @@ function renderPlan() {
   </div>`).join('');
 }
 $('pDays').addEventListener('click', ev => {
-  const sw = ev.target.closest('[data-swap]');
+  const sw = up(ev, '[data-swap]');
   if (sw) {
     const [i, k] = sw.dataset.swap.split('|'), day = R.plan.days[i];
     const other = k === 'l' ? day.d : k === 'd' ? day.l : null;
@@ -962,7 +967,7 @@ $('pDays').addEventListener('click', ev => {
     if (alt) { day[k] = alt.id; saveR(); renderPlan(); renderHome(); }
     return;
   }
-  const op = ev.target.closest('[data-open]');
+  const op = up(ev, '[data-open]');
   if (op && op.dataset.open) openRecipe(Number(op.dataset.open));
 });
 ['pBudget', 'pPersons', 'pReserve', 'pSnacks'].forEach(id => $(id).addEventListener('change', () => {
@@ -1005,7 +1010,7 @@ const shopCost = () => Object.entries(R.picked).reduce((s, [id, sv]) => { const 
 
 function rRenderShop() {
   const ids = Object.keys(R.picked).filter(id => rById(id));
-  $('rShopCount').textContent = ids.length;
+  $('rShopCount').textContent = String(ids.length);
   const est = shopCost();
   $('rShopCost').textContent = ids.length ? `Cost estimat: ≈ ${lei(est)}` : '';
   if (!$('rBuyAmount').dataset.touched) $('rBuyAmount').value = est ? est.toFixed(2) : '';
@@ -1021,16 +1026,16 @@ function rRenderShop() {
     : '<li class="empty" style="display:block">Lista de cumpărături e goală.</li>';
 }
 $('rPicked').addEventListener('change', ev => {
-  const id = ev.target.dataset.serv, v = parseInt(ev.target.value, 10);
+  const id = tgt(ev).dataset.serv, v = parseInt(tgt(ev).value, 10);
   if (id && v > 0) { R.picked[id] = v; saveR(); rRenderShop(); }
 });
 $('rPicked').addEventListener('click', ev => {
-  const id = ev.target.dataset.unpick; if (!id) return;
+  const id = tgt(ev).dataset.unpick; if (!id) return;
   delete R.picked[id]; saveR(); rRenderAll();
 });
 $('rShop').addEventListener('change', ev => {
-  const k = ev.target.dataset.key; if (!k) return;
-  if (ev.target.checked) R.checked[k] = true; else delete R.checked[k];
+  const k = tgt(ev).dataset.key; if (!k) return;
+  if (tgt(ev).checked) R.checked[k] = true; else delete R.checked[k];
   saveR(); rRenderShop();
 });
 $('rUncheck').onclick = () => { R.checked = {}; saveR(); rRenderShop(); };
@@ -1066,7 +1071,7 @@ function rRenderAll() { rRenderResults(); rRenderShop(); renderPlan(); }
 $('exportAll').onclick = () => download(`daily-hub-backup-${today()}.json`, JSON.stringify({app: 'daily-hub', version: 1, budget: B, recipes: R}, null, 2), 'application/json');
 $('importAll').onclick = () => $('importFile').click();
 $('importFile').onchange = async ev => {
-  const file = ev.target.files[0]; if (!file) return;
+  const file = tgt(ev).files[0]; if (!file) return;
   try {
     const d = JSON.parse(await file.text());
     // accepts a combined backup, or a backup from one of the old single apps
@@ -1079,7 +1084,7 @@ $('importFile').onchange = async ev => {
     if (nr) { R = {picked: {}, checked: {}, ...nr}; saveR(); }
     rMigrate(); renderEverything(); toast('Backup restaurat');
   } catch { toast('Fișierul nu este un backup valid'); }
-  ev.target.value = '';
+  tgt(ev).value = '';
 };
 
 /* ================= Start ================= */
