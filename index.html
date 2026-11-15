@@ -1,0 +1,1104 @@
+<!doctype html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Daily Hub</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#f4f5f8" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#13151a" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Daily Hub">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<style>
+:root{
+  --bg:#f4f5f8;--card:#fff;--text:#1f2430;--muted:#6b7280;--border:#e4e7ec;--soft:#f1f3f6;--danger:#d64545;--hit:#fff1b8;
+  --budget:#3b6fe0;--budget-soft:#e4ecfc;--gym:#1f9d6b;--gym-soft:#dcf3e9;--food:#d0602f;--food-soft:#fae6dc;--home:#7b5be0;--home-soft:#ece6fc;
+  --accent:var(--home);--accent-soft:var(--home-soft);--shadow:0 1px 2px rgba(20,30,50,.05),0 4px 16px rgba(20,30,50,.06)
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#13151a;--card:#1c1f26;--text:#e7e9ee;--muted:#9aa1ad;--border:#2b3039;--soft:#23272f;--danger:#ef6b6b;--hit:#5a4a10;
+  --budget:#6b95f2;--budget-soft:#22304a;--gym:#3cc48e;--gym-soft:#1b372c;--food:#ec8455;--food-soft:#3d2a20;--home:#a48cf5;--home-soft:#2e2748;--shadow:none
+}}
+body[data-view=budget]{--accent:var(--budget);--accent-soft:var(--budget-soft)}
+body[data-view=recipes]{--accent:var(--food);--accent-soft:var(--food-soft)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+svg.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+
+/* layout */
+.app{display:grid;grid-template-columns:230px 1fr;min-height:100vh}
+nav.side{position:sticky;top:0;height:100vh;padding:24px 14px;border-right:1px solid var(--border);background:var(--card);display:flex;flex-direction:column;gap:4px}
+.brand{font-weight:800;font-size:20px;padding:0 10px 18px;display:flex;align-items:center;gap:10px}
+.brand .logo{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--budget),var(--gym) 50%,var(--food));display:grid;place-items:center;color:#fff}
+nav.side button{display:flex;align-items:center;gap:12px;background:none;border:none;color:var(--muted);font:inherit;font-weight:600;padding:10px 12px;border-radius:10px;cursor:pointer;text-align:left}
+nav.side button:hover{background:var(--soft);color:var(--text)}
+nav.side button.on{background:var(--accent-soft);color:var(--accent)}
+nav.side .foot{margin-top:auto;font-size:12px;color:var(--muted);padding:0 10px}
+main{padding:calc(28px + env(safe-area-inset-top)) 28px 80px;max-width:1040px;width:100%;min-width:0}
+.view{display:none;animation:fade .2s ease}.view.on{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+@media (max-width:760px){
+  .app{grid-template-columns:1fr}
+  nav.side{position:fixed;bottom:0;top:auto;left:0;right:0;height:auto;flex-direction:row;justify-content:space-around;padding:6px 4px calc(6px + env(safe-area-inset-bottom));border-right:none;border-top:1px solid var(--border);z-index:20}
+  nav.side .brand,nav.side .foot{display:none}
+  nav.side button{flex-direction:column;gap:2px;font-size:11px;padding:6px 10px}
+  main{padding:calc(20px + env(safe-area-inset-top)) 16px calc(100px + env(safe-area-inset-bottom))}
+  .seg{display:flex;flex-wrap:nowrap}.seg button{flex:1;padding:7px 6px;font-size:14px;white-space:nowrap}
+}
+
+/* type & cards */
+h1{margin:0;font-size:26px;letter-spacing:-.01em}
+h2{font-size:16px;margin:0 0 12px}
+.page-head{display:flex;align-items:center;gap:14px;margin-bottom:20px;flex-wrap:wrap}
+.page-head .ic{width:44px;height:44px;border-radius:12px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center}
+.page-head p{margin:2px 0 0;color:var(--muted)}
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px;margin-bottom:16px;box-shadow:var(--shadow)}
+.grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+.head{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.head h2{margin:0}
+.muted{color:var(--muted)}
+.empty{color:var(--muted);text-align:center;padding:18px}
+.hint{font-size:12px;color:var(--muted)}
+.hidden{display:none!important}
+
+/* forms */
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:end}
+label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted);flex:1 1 140px}
+input,select,button,textarea{font:inherit;color:inherit;background:var(--soft);border:1px solid var(--border);border-radius:10px;padding:9px 11px}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:-1px;background:var(--card)}
+textarea{resize:vertical;min-height:140px}
+button{cursor:pointer;background:var(--accent);color:#fff;border-color:var(--accent);font-weight:600}
+button:hover{filter:brightness(1.05)}
+button.ghost{background:transparent;color:var(--text);border-color:var(--border);font-weight:500}
+button.ghost:hover{background:var(--soft)}
+button.small{padding:5px 11px;font-size:13px}
+button.danger{color:var(--danger)}
+button.x{background:transparent;color:var(--muted);border:none;padding:4px 8px;font-size:18px;line-height:1}
+button.x:hover{color:var(--danger)}
+.seg{display:inline-flex;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:4px;gap:2px;margin-bottom:16px;flex-wrap:wrap}
+.seg button{background:none;border:none;color:var(--muted);padding:7px 14px;border-radius:9px}
+.seg button.on{background:var(--accent);color:#fff}
+
+/* stats */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px}
+.stat{background:var(--soft);border-radius:12px;padding:12px 14px}
+.stat b{display:block;font-size:22px;font-variant-numeric:tabular-nums}.stat span{color:var(--muted);font-size:13px}
+.bar-row{display:grid;grid-template-columns:110px 1fr 100px;gap:10px;align-items:center;margin:8px 0;font-size:14px}
+.bar{height:10px;background:var(--accent-soft);border-radius:5px;overflow:hidden}.bar i{display:block;height:100%;background:var(--accent);border-radius:5px}
+.amt{text-align:right;font-variant-numeric:tabular-nums}
+.trend{display:flex;gap:8px;align-items:end;height:150px;padding-top:8px}
+.trend div{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:end;height:100%;font-size:12px;color:var(--muted);gap:4px;white-space:nowrap;min-width:0}
+@media (max-width:760px){.trend{gap:4px}.trend div{font-size:10px}}
+/* recipe collection & weekly menu */
+.kid{margin-top:10px;padding:10px 12px;border-radius:10px;background:var(--accent-soft);font-size:14px}
+.cost{font-weight:700;color:var(--text)}
+.checks{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px}
+label.check{flex-direction:row;align-items:center;gap:6px;flex:0 0 auto;background:var(--soft);border:1px solid var(--border);border-radius:99px;padding:6px 12px;color:var(--text);cursor:pointer;font-size:14px}
+label.check input{margin:0;padding:0}
+.meter{height:12px;background:var(--soft);border-radius:6px;overflow:hidden;margin:14px 0 6px}
+.meter i{display:block;height:100%;background:var(--gym);border-radius:6px}
+.meter.over i{background:var(--danger)}
+.days{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(230px,1fr))}
+.dayc{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;box-shadow:var(--shadow)}
+.dayc.today{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.dayc h3{margin:0 0 6px;font-size:15px;display:flex;justify-content:space-between;align-items:center;gap:6px}
+.meal{display:grid;grid-template-columns:1fr auto;gap:0 6px;align-items:center;padding:6px 0;border-top:1px solid var(--border);font-size:14px}
+.meal .mt{grid-column:1/-1;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+.meal a{color:var(--text);cursor:pointer}.meal a:hover{color:var(--accent)}
+.meal button.x{font-size:15px;padding:2px 4px}
+.ok-msg{font-weight:600;color:var(--gym)}.over-msg{font-weight:600;color:var(--danger)}
+.trend div i{width:100%;max-width:46px;background:var(--accent-soft);border-radius:7px 7px 3px 3px;min-height:3px}
+.trend div.cur i{background:var(--accent)}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{padding:9px 6px;border-bottom:1px solid var(--border);text-align:left}
+th{color:var(--muted);font-weight:500}
+.chip{display:inline-flex;align-items:center;gap:2px;background:var(--soft);border:1px solid var(--border);border-radius:99px;padding:2px 4px 2px 12px;margin:3px;font-size:13px}
+.catdot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent);margin-right:6px}
+.table-wrap{overflow-x:auto}
+
+/* home */
+.hello{font-size:28px;font-weight:800;margin:0}
+.hello-sub{color:var(--muted);margin:4px 0 22px}
+.quick{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px}
+.quick button{display:flex;align-items:center;gap:8px;border-radius:99px;padding:10px 16px}
+.quick .qb{background:var(--budget);border-color:var(--budget)}
+.quick .qf{background:var(--food);border-color:var(--food)}
+.tile{cursor:pointer;transition:transform .15s}
+.tile:hover{transform:translateY(-2px)}
+.tile .top{display:flex;align-items:center;gap:10px;margin-bottom:12px;font-weight:700}
+.tile .top .ic{width:34px;height:34px;border-radius:10px;display:grid;place-items:center}
+.tile.b .ic{background:var(--budget-soft);color:var(--budget)}.tile.g .ic{background:var(--gym-soft);color:var(--gym)}.tile.f .ic{background:var(--food-soft);color:var(--food)}
+.tile .big{font-size:30px;font-weight:800;line-height:1.1;font-variant-numeric:tabular-nums}
+.tile .line{color:var(--muted);font-size:14px;margin-top:4px}
+.tile .more{margin-top:12px;font-size:13px;font-weight:600}
+.tile.b .more{color:var(--budget)}.tile.g .more{color:var(--gym)}.tile.f .more{color:var(--food)}
+.mini{display:flex;flex-direction:column;gap:6px;margin-top:12px}
+.mini div{display:grid;grid-template-columns:90px 1fr;gap:8px;align-items:center;font-size:13px}
+.mini span.bar{height:8px;background:var(--budget-soft)}.mini span.bar i{background:var(--budget)}
+.week{display:flex;gap:6px;margin-top:12px}
+.week span{flex:1;text-align:center;font-size:11px;color:var(--muted)}
+.week span i{display:block;height:26px;border-radius:7px;background:var(--soft);margin-bottom:3px}
+.week span.on i{background:var(--gym)}
+
+/* recipes */
+.recipe-head{display:flex;justify-content:space-between;gap:12px;align-items:start;flex-wrap:wrap}
+.recipe-head h3{margin:0;font-size:17px}
+.meta{color:var(--muted);font-size:13px}
+.tag{display:inline-block;background:var(--accent-soft);border-radius:7px;padding:0 8px;font-size:12px;margin:4px 4px 0 0}
+.ings{margin:10px 0 0;padding-left:20px}
+.ings li.hit{background:var(--hit);border-radius:4px;padding:0 4px}
+.steps{white-space:pre-wrap;margin-top:10px}
+details summary{cursor:pointer;color:var(--accent);font-size:14px;font-weight:600;margin-top:10px}
+.actions{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.badge{background:var(--food);color:#fff;border-radius:99px;padding:0 7px;font-size:12px;margin-left:4px}
+.seg button.on .badge{background:#fff;color:var(--food)}
+.shop{padding:0;margin:0}
+.shop li{list-style:none;display:flex;gap:10px;align-items:baseline;padding:8px 0;border-bottom:1px solid var(--border)}
+.shop li.done span{text-decoration:line-through;color:var(--muted)}
+.shop small{color:var(--muted);margin-left:auto;text-align:right}
+.picked{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:8px 0;border-bottom:1px solid var(--border)}
+.picked input{width:72px}
+
+/* toast */
+#toast{position:fixed;left:50%;bottom:28px;transform:translate(-50%,20px);background:var(--text);color:var(--bg);padding:10px 18px;border-radius:99px;font-weight:600;font-size:14px;opacity:0;pointer-events:none;transition:.25s;z-index:50}
+#toast.show{opacity:1;transform:translate(-50%,0)}
+@media (max-width:760px){#toast{bottom:84px}}
+</style>
+</head>
+<body data-view="home">
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></symbol>
+  <symbol id="i-wallet" viewBox="0 0 24 24"><rect x="2.5" y="6" width="19" height="14" rx="3"/><path d="M2.5 10h19M16.5 15h1.5M6 6l9-3 1.5 3"/></symbol>
+  <symbol id="i-gym-unused" viewBox="0 0 24 24"><path d="M6.5 6.5v11M3.5 9v6M17.5 6.5v11M20.5 9v6M6.5 12h11"/></symbol>
+  <symbol id="i-book" viewBox="0 0 24 24"><path d="M5 4h10a4 4 0 0 1 4 4v13H9a4 4 0 0 1-4-4z"/><path d="M9 21a2 2 0 0 1 0-4h10M9 8h6M9 11h4"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+</svg>
+
+<div class="app">
+  <nav class="side">
+    <div class="brand"><span class="logo"><svg class="i"><use href="#i-home"/></svg></span>Daily Hub</div>
+    <button data-go="home" class="on"><svg class="i"><use href="#i-home"/></svg>Acasă</button>
+    <button data-go="budget"><svg class="i"><use href="#i-wallet"/></svg>Buget</button>
+    <button data-go="recipes"><svg class="i"><use href="#i-book"/></svg>Rețete</button>
+    <div class="foot">Totul se salvează în acest browser. Folosește Backup de pe pagina Acasă ca să păstrezi o copie.</div>
+  </nav>
+
+  <main>
+    <!-- ================= HOME ================= -->
+    <section class="view on" id="view-home">
+      <p class="hello" id="hello">Salut!</p>
+      <p class="hello-sub" id="helloSub"></p>
+      <div class="quick">
+        <button class="qb" data-quick="budget"><svg class="i"><use href="#i-plus"/></svg>Adaugă cheltuială</button>
+        <button class="qf" data-quick="plan">🍽 Meniul săptămânii</button>
+        <button class="qf" data-quick="shop">🛒 Lista de cumpărături</button>
+      </div>
+      <div class="grid">
+        <div class="card tile b" data-go="budget"><div class="top"><span class="ic"><svg class="i"><use href="#i-wallet"/></svg></span>Buget</div><div id="homeBudget"></div></div>
+        <div class="card tile f" data-quick="plan"><div class="top"><span class="ic"><svg class="i"><use href="#i-book"/></svg></span>Rețete</div><div id="homeFood"></div></div>
+      </div>
+      <div class="card">
+        <h2>Backup</h2>
+        <p class="muted" style="margin:0 0 12px;font-size:14px">Descarcă toate datele (buget și rețete) într-un singur fișier sau restaurează-le dintr-un backup.</p>
+        <div class="row">
+          <button class="ghost" id="exportAll">Descarcă backup</button>
+          <button class="ghost" id="importAll">Restaurează din backup</button>
+          <input type="file" id="importFile" accept="application/json" hidden>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= BUDGET ================= -->
+    <section class="view" id="view-budget">
+      <div class="page-head"><span class="ic"><svg class="i"><use href="#i-wallet"/></svg></span><div><h1>Buget</h1><p>Notează cheltuielile și vezi unde se duc banii.</p></div></div>
+
+      <div class="card">
+        <h2>Adaugă cheltuială</h2>
+        <form id="bForm" class="row">
+          <label>Data<input type="date" id="bDate" required></label>
+          <label>Suma (lei)<input type="number" id="bAmount" step="0.01" min="0.01" placeholder="0.00" required></label>
+          <label>Categorie<select id="bCat"></select></label>
+          <label style="flex:2 1 200px">Notă<input id="bNote" placeholder="ex. cumpărături"></label>
+          <button type="submit">Adaugă</button>
+        </form>
+      </div>
+
+      <div class="card">
+        <div class="head">
+          <h2>Rezumat lunar</h2>
+          <div class="row" style="gap:6px">
+            <button class="ghost small" id="bPrev" aria-label="Luna anterioară">‹</button>
+            <input type="month" id="bMonth">
+            <button class="ghost small" id="bNext" aria-label="Luna următoare">›</button>
+          </div>
+        </div>
+        <div class="stats" id="bStats"></div>
+      </div>
+      <div class="card" id="bFood"></div>
+
+      <div class="grid">
+        <div class="card"><h2>Pe categorii</h2><div id="bByCat"></div></div>
+        <div class="card"><h2>Ultimele 6 luni</h2><div class="trend" id="bTrend"></div></div>
+      </div>
+
+      <div class="card">
+        <div class="head"><h2>Cheltuielile lunii</h2><select id="bFilter"></select></div>
+        <div class="table-wrap"><table><thead><tr><th>Data</th><th>Categorie</th><th>Notă</th><th class="amt">Suma</th><th></th></tr></thead><tbody id="bList"></tbody></table></div>
+      </div>
+
+      <div class="card">
+        <h2>Categorii</h2>
+        <div id="bCats"></div>
+        <form id="bCatForm" class="row" style="margin-top:10px">
+          <label>Categorie nouă<input id="bNewCat" placeholder="ex. Animale" required></label>
+          <button type="submit">Adaugă categorie</button>
+          <button type="button" class="ghost" id="bCsv">Exportă cheltuielile (CSV)</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- ================= RECIPES ================= -->
+    <section class="view" id="view-recipes">
+      <div class="page-head"><span class="ic"><svg class="i"><use href="#i-book"/></svg></span><div><h1>Rețete</h1><p>Cartea ta de bucate, căutare după ingrediente și lista de cumpărături.</p></div></div>
+      <div class="seg" id="rSeg"><button class="on" data-sub="browse">Rețete</button><button data-sub="plan">Meniu</button><button data-sub="shop">Cumpărături <span class="badge" id="rShopCount">0</span></button><button data-sub="edit" id="rEditTab">Adaugă</button></div>
+
+      <div data-rsub="browse">
+        <div class="card">
+          <div class="row">
+            <label style="flex:3 1 260px">Ce ai în casă? (ingrediente, separate prin virgulă)<input id="rQIng" placeholder="ex. ouă, roșie"></label>
+            <label style="flex:1 1 140px">Potrivire<select id="rQMode"><option value="all">Toate</option><option value="any">Oricare</option></select></label>
+            <label style="flex:2 1 180px">Nume sau etichetă<input id="rQText" placeholder="ex. paste, rapid"></label>
+          </div>
+          <div class="checks">
+            <select id="rQMeal"><option value="">Toate mesele</option><option value="mic dejun">Mic dejun</option><option value="principal">Prânz / cină</option><option value="gustare">Gustări</option></select>
+            <label class="check"><input type="checkbox" id="rQSpicy"> 🌶 Picante</label>
+            <label class="check"><input type="checkbox" id="rQCheap"> Ieftine (≤ 5 lei/porție)</label>
+            <span class="meta" id="rCount"></span>
+          </div>
+        </div>
+        <div id="rResults"></div>
+      </div>
+
+      <div data-rsub="edit" class="hidden">
+        <form class="card" id="rForm">
+          <h2 id="rFormTitle">Adaugă rețetă</h2>
+          <div class="row">
+            <label style="flex:3 1 260px">Nume<input id="rName" required></label>
+            <label style="flex:1 1 100px">Porții<input id="rServ" type="number" min="1" value="4" required></label>
+            <label style="flex:1 1 100px">Timp (min)<input id="rTime" type="number" min="0" placeholder="30"></label>
+          </div>
+          <div class="row" style="margin-top:10px">
+            <label>Tip masă<select id="rMeal"><option value="">—</option><option value="mic dejun">Mic dejun</option><option value="principal">Prânz / cină</option><option value="gustare">Gustare</option></select></label>
+            <label>Cost estimat pentru toate porțiile (lei)<input id="rCost" type="number" min="0" step="0.5" placeholder="ex. 25"></label>
+          </div>
+          <div class="row" style="margin-top:10px"><label>Etichete (separate prin virgulă)<input id="rTags" placeholder="cină, vegetarian, rapid"></label></div>
+          <div class="row" style="margin-top:10px">
+            <label>Ingrediente, câte unul pe rând
+              <textarea id="rIngs" required placeholder="200 g spaghete&#10;2 căței usturoi&#10;1 lingură ulei de măsline&#10;sare"></textarea>
+              <span class="hint">Scrie cantitatea, unitatea, apoi numele („200 g făină”, „2 linguri zahăr”, „3 ouă”). Merg și rânduri fără cantitate.</span>
+            </label>
+            <label>Pași<textarea id="rSteps" placeholder="1. Fierbe pastele…"></textarea></label>
+          </div>
+          <div class="row" style="margin-top:10px"><label>🌶 Sfat pentru copilul mofturos (opțional)<input id="rKid" placeholder="ex. pune fulgi de chili doar în porția lui"></label></div>
+          <div class="row" style="margin-top:12px">
+            <button type="submit">Salvează rețeta</button>
+            <button type="button" class="ghost" id="rCancel">Anulează</button>
+          </div>
+        </form>
+      </div>
+
+      <div data-rsub="plan" class="hidden">
+        <div class="card">
+          <h2>Meniu săptămânal în buget</h2>
+          <p class="muted" style="margin:0 0 12px;font-size:14px">Colecția are rețete sănătoase pentru 4 persoane, cu cost estimat. Prețurile sunt aproximative (supermarket, ex. Lidl/Kaufland), deci corectează-le din „Editează” dacă diferă la tine. Fiecare rețetă are un sfat 🌶 pentru copilul căruia îi place iute.</p>
+          <div class="row">
+            <label>Buget lunar pentru mâncare (lei)<input type="number" id="pBudget" min="100" step="50"></label>
+            <label>Persoane<input type="number" id="pPersons" min="1" max="12"></label>
+            <label>Rezervă pentru pâine, fructe, lactate, cafea (%)<input type="number" id="pReserve" min="0" max="60"></label>
+          </div>
+          <div class="checks">
+            <label class="check"><input type="checkbox" id="pSnacks"> Include gustări</label>
+            <button id="pGen">↻ Generează alt meniu</button>
+            <button class="ghost" id="pToShop">🛒 Pune săptămâna pe lista de cumpărături</button>
+          </div>
+        </div>
+        <div class="card" id="pSummary"></div>
+        <div class="days" id="pDays"></div>
+      </div>
+
+      <div data-rsub="shop" class="hidden">
+        <div class="card"><h2>Rețete pe listă</h2><div id="rShopCost" class="meta" style="margin:-6px 0 8px"></div><div id="rPicked"></div></div>
+        <div class="card">
+          <div class="head">
+            <h2>Lista de cumpărături</h2>
+            <div class="actions">
+              <button class="ghost small" id="rCopy">Copiază ca text</button>
+              <button class="ghost small" id="rUncheck">Debifează tot</button>
+              <button class="ghost small danger" id="rClear">Golește lista</button>
+            </div>
+          </div>
+          <ul class="shop" id="rShop"></ul>
+        </div>
+        <div class="card">
+          <h2>🧾 Am făcut cumpărăturile</h2>
+          <p class="muted" style="margin:0 0 12px;font-size:14px">Trece suma în <strong>Buget</strong>, la categoria Mâncare. E completată cu estimarea, dar pune suma de pe bon dacă o ai.</p>
+          <div class="row">
+            <label>Data<input type="date" id="rBuyDate"></label>
+            <label>Suma plătită (lei)<input type="number" id="rBuyAmount" step="0.01" min="0.01" placeholder="0,00"></label>
+            <button id="rBuy">Adaugă în Buget</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+<div id="toast"></div>
+
+<script>
+/* ================= Shared helpers ================= */
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const today = () => { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 10); };
+const addDays = (d, n) => { const x = new Date(d + 'T12:00'); x.setDate(x.getDate() + n); return x.toISOString().slice(0, 10); };
+const ym = d => d.slice(0, 7);
+const shiftMonth = (m, by) => { const [y, mo] = m.split('-').map(Number); const d = new Date(y, mo - 1 + by, 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; };
+const monthName = (m, long) => new Date(m + '-01T00:00').toLocaleDateString('ro-RO', long ? {month: 'long', year: 'numeric'} : {month: 'short', year: '2-digit'});
+const fmtDate = d => new Date(d + 'T00:00').toLocaleDateString('ro-RO', {weekday: 'short', day: 'numeric', month: 'short', year: 'numeric'});
+const shortDate = d => new Date(d + 'T00:00').toLocaleDateString('ro-RO', {day: 'numeric', month: 'short'});
+const money = n => n.toLocaleString('ro-RO', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' lei';
+const num = n => Number.isInteger(n) ? String(n) : n.toFixed(1);
+function load(key, fallback, check) { try { const v = JSON.parse(localStorage.getItem(key)); if (v && check(v)) return v; } catch {} return fallback(); }
+function store(key, v) { try { localStorage.setItem(key, JSON.stringify(v)); } catch {} }
+let toastTimer;
+function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 1800); }
+function download(name, text, type) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([text], {type})); a.download = name; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+/* ================= Data ================= */
+const K = {budget: 'budget-tracker-v1', food: 'recipe-book-v1'};
+const DEFAULT_CATS = ['Mâncare', 'Transport', 'Locuință', 'Utilități', 'Sănătate', 'Distracție', 'Cumpărături', 'Altele'];
+const SAMPLE_RECIPES = [
+  {id: 1, name: 'Spaghete cu roșii și usturoi', servings: 2, time: 20, tags: ['cină', 'vegetarian', 'rapid'],
+   ingredients: ['200 g spaghete', '3 căței usturoi', '400 g roșii din conservă', '2 linguri ulei de măsline', '1 linguriță fulgi de chili', 'sare', 'busuioc proaspăt'],
+   steps: '1. Fierbe spaghetele în apă cu sare.\n2. Călește ușor usturoiul feliat și chili-ul în ulei.\n3. Adaugă roșiile și fierbe 10 minute; condimentează.\n4. Amestecă cu pastele și busuiocul.'},
+  {id: 2, name: 'Omletă cu legume', servings: 1, time: 10, tags: ['mic dejun', 'vegetarian', 'rapid'],
+   ingredients: ['3 ouă', '1/2 ardei gras', '1 roșie', '30 g brânză', '1 lingură unt', 'sare'],
+   steps: '1. Bate ouăle cu un praf de sare.\n2. Călește ardeiul tocat în unt.\n3. Toarnă ouăle, adaugă roșia și brânza, apoi pliază omleta când s-a închegat.'},
+];
+let B = load(K.budget, () => ({expenses: [], categories: DEFAULT_CATS.slice()}), v => Array.isArray(v.expenses) && Array.isArray(v.categories));
+/* Healthy, budget-friendly collection for 4 people (2 adults + 2 children).
+   cost = estimated lei for all servings (approximate supermarket prices).
+   kid = how to make the portion spicy for the child who loves spicy food, without changing it for everyone. */
+const LIB_VERSION = 2;
+const LIBRARY = [
+  // ---------- Mic dejun ----------
+  {id: 1001, name: 'Terci de ovăz cu banane și scorțișoară', meal: 'mic dejun', servings: 4, time: 10, cost: 12, tags: ['copii', 'vegetarian', 'rapid'],
+   ingredients: ['200 g fulgi de ovăz', '800 ml lapte', '2 banane', '1 linguriță scorțișoară', '2 linguri miere'],
+   steps: '1. Fierbe ovăzul în lapte 5 minute, amestecând des.\n2. Adaugă bananele zdrobite și scorțișoara.\n3. Servește cu puțină miere deasupra.',
+   kid: 'Pune topping-urile în boluri separate (banane, cacao, nuci) și lasă-l să-și facă singur bolul. Copiii mofturoși mănâncă mai bine ce aleg singuri.'},
+  {id: 1002, name: 'Frittata cu legume la cuptor', meal: 'mic dejun', servings: 4, time: 25, cost: 20, tags: ['copii', 'vegetarian', 'proteine'],
+   ingredients: ['8 ouă', '1 ardei gras', '1 ceapă', '100 g spanac congelat', '100 g telemea', '1 lingură ulei', 'sare, piper'],
+   steps: '1. Călește ceapa și ardeiul tocate în ulei 5 minute, apoi adaugă spanacul.\n2. Bate ouăle cu sare și piper, toarnă peste legume și sfărâmă telemeaua deasupra.\n3. Coace 15 minute la 180°C. Se taie felii ca o pizza.',
+   kid: 'Presară fulgi de chili sau rondele de ardei iute doar pe colțul lui de tavă, înainte de copt.'},
+  {id: 1003, name: 'Shakshuka (ouă în sos de roșii)', meal: 'mic dejun', servings: 4, time: 25, cost: 18, tags: ['picant', 'vegetarian'],
+   ingredients: ['8 ouă', '800 g roșii din conservă', '1 ardei gras', '1 ceapă', '2 căței usturoi', '1 linguriță boia dulce', '1 linguriță chimion', '1 lingură ulei', '1 pâine integrală'],
+   steps: '1. Călește ceapa, ardeiul și usturoiul în ulei.\n2. Adaugă roșiile, boiaua și chimionul și fierbe 10 minute.\n3. Fă 8 adâncituri, sparge ouăle în ele, acoperă și gătește 5–7 minute.\n4. Servește cu pâine integrală.',
+   kid: 'Adaugă boia iute sau ardei iute tocat doar în colțul tigăii unde gătești ouăle lui.'},
+  {id: 1004, name: 'Clătite integrale cu iaurt și fructe de pădure', meal: 'mic dejun', servings: 4, time: 25, cost: 18, tags: ['copii', 'vegetarian'],
+   ingredients: ['250 g făină integrală', '2 ouă', '500 ml lapte', '1 lingură ulei', '400 g iaurt', '300 g fructe de pădure congelate', '1 lingură miere'],
+   steps: '1. Amestecă făina, ouăle, laptele și uleiul până obții un aluat fluid.\n2. Coace clătite subțiri într-o tigaie unsă ușor.\n3. Umple-le cu iaurt și fructe dezghețate, cu un strop de miere.',
+   kid: 'Fă-i și 1–2 clătite sărate: cu brânză și un strop de sos iute.'},
+  {id: 1005, name: 'Iaurt cu granola de casă și mere', meal: 'mic dejun', servings: 4, time: 20, cost: 16, tags: ['copii', 'vegetarian'],
+   ingredients: ['800 g iaurt', '150 g fulgi de ovăz', '30 g nuci', '2 linguri miere', '2 mere', '1 linguriță scorțișoară'],
+   steps: '1. Amestecă ovăzul, nucile tocate, mierea și scorțișoara.\n2. Coace 12–15 minute la 170°C, amestecând o dată, apoi lasă la răcit (devine crocantă).\n3. Servește iaurtul cu granola și mere tăiate cubulețe.',
+   kid: 'Lasă-l să-și asambleze singur paharul, în straturi. Granola se păstrează o săptămână într-un borcan.'},
+  {id: 1006, name: 'Pâine integrală cu cremă de brânză de vaci și legume', meal: 'mic dejun', servings: 4, time: 10, cost: 20, tags: ['vegetarian', 'rapid', 'proteine'],
+   ingredients: ['500 g brânză de vaci', '200 g iaurt', '1 legătură mărar', '1 castravete', '2 roșii', '1 pâine integrală', 'sare'],
+   steps: '1. Amestecă brânza de vaci cu iaurtul, mărarul tocat și puțină sare.\n2. Unge feliile de pâine și servește cu castravete și roșii.',
+   kid: 'Amestecă în porția lui de cremă boia iute sau puțin ardei iute tocat și numește-o „crema picantă a lui”.'},
+  {id: 1007, name: 'Orez cu lapte și mere', meal: 'mic dejun', servings: 4, time: 30, cost: 12, tags: ['copii', 'vegetarian'],
+   ingredients: ['200 g orez', '1 l lapte', '2 mere', '1 linguriță scorțișoară', '2 linguri miere'],
+   steps: '1. Fierbe orezul în lapte la foc mic 25 de minute, amestecând des.\n2. Adaugă merele rase și scorțișoara în ultimele 5 minute.\n3. Îndulcește cu miere după ce s-a mai răcit.',
+   kid: 'Se poate face din seara dinainte. Rece din frigider e ca o budincă.'},
+  {id: 1008, name: 'Mămăliguță cu brânză și iaurt', meal: 'mic dejun', servings: 4, time: 20, cost: 11, tags: ['vegetarian', 'copii'],
+   ingredients: ['250 g mălai', '150 g telemea', '400 g iaurt', 'sare'],
+   steps: '1. Fierbe 1 l apă cu sare, adaugă mălaiul în ploaie și amestecă 10–12 minute.\n2. Servește mămăliga caldă cu telemea sfărâmată și iaurt.',
+   kid: 'Presară boia iute peste brânza lui sau pune un ardei iute alături.'},
+
+  // ---------- Prânz / cină ----------
+  {id: 1101, name: 'Supă cremă de linte roșie', meal: 'principal', servings: 4, time: 30, cost: 14, tags: ['vegetarian', 'de post', 'copii'],
+   ingredients: ['300 g linte roșie', '1 ceapă', '2 morcovi', '2 căței usturoi', '400 g roșii din conservă', '1 linguriță chimion', '1 linguriță boia dulce', '1 lingură ulei', 'sare'],
+   steps: '1. Călește ceapa, morcovii și usturoiul în ulei 5 minute.\n2. Adaugă lintea clătită, roșiile, condimentele și 1,5 l apă.\n3. Fierbe 20 de minute, apoi pasează cu blenderul.',
+   kid: 'Pune-i deasupra fulgi de chili și o lingură de iaurt, ca „la restaurant”.'},
+  {id: 1102, name: 'Ciorbă de legume', meal: 'principal', servings: 4, time: 45, cost: 14, tags: ['vegetarian', 'de post'],
+   ingredients: ['3 cartofi', '2 morcovi', '1 păstârnac', '1 ceapă', '1 ardei gras', '200 g fasole verde congelată', '200 g mazăre congelată', '400 g roșii din conservă', '500 ml borș', '1 legătură leuștean', 'sare'],
+   steps: '1. Fierbe în 2,5 l apă ceapa, morcovii și păstârnacul tăiate mărunt, 15 minute.\n2. Adaugă cartofii, ardeiul, fasolea și mazărea și fierbe încă 15 minute.\n3. Pune roșiile și borșul, dă un clocot și presară leușteanul.',
+   kid: 'Ca la bunica: ardei iute crud lângă farfurie, să muște din el.'},
+  {id: 1103, name: 'Ciorbă de perișoare de pui', meal: 'principal', servings: 4, time: 60, cost: 26, tags: ['copii', 'proteine'],
+   ingredients: ['400 g carne tocată de pui', '50 g orez', '1 ou', '1 ceapă', '2 morcovi', '1 păstârnac', '1 ardei gras', '400 g roșii din conservă', '500 ml borș', '1 legătură leuștean', 'sare'],
+   steps: '1. Fierbe legumele tocate în 2,5 l apă, 15 minute.\n2. Amestecă carnea cu orezul, oul și sare, apoi formează perișoare mici.\n3. Pune perișoarele în supă și fierbe 20 de minute.\n4. Adaugă roșiile și borșul, apoi leușteanul.',
+   kid: 'Ardei iute alături. Poți face și câteva perișoare cu boia iute în compoziție, numai pentru el.'},
+  {id: 1104, name: 'Tocăniță de pui cu mămăliguță', meal: 'principal', servings: 4, time: 50, cost: 28, tags: ['proteine'],
+   ingredients: ['800 g pulpe de pui dezosate', '2 ardei gras', '1 ceapă', '2 morcovi', '400 g roșii din conservă', '1 linguriță boia dulce', '1 lingură ulei', '300 g mălai', 'sare'],
+   steps: '1. Rumenește carnea tăiată bucăți în ulei.\n2. Adaugă ceapa, morcovii și ardeii și călește 5 minute.\n3. Pune roșiile, boiaua și puțină apă, apoi fierbe acoperit 30 de minute.\n4. Fă mămăliga cu 1,2 l apă și sare.',
+   kid: 'Scoate porția lui într-o crăticioară mică, pune boia iute și mai fierbe 2 minute.'},
+  {id: 1105, name: 'Chili cu pui și fasole', meal: 'principal', servings: 4, time: 40, cost: 28, tags: ['picant', 'copii', 'proteine'],
+   ingredients: ['500 g carne tocată de pui', '2 conserve fasole roșie', '1 conservă porumb', '400 g roșii din conservă', '1 ceapă', '1 ardei gras', '2 căței usturoi', '1 linguriță chimion', '1 linguriță boia dulce', '1/2 linguriță chili', '300 g orez'],
+   steps: '1. Călește ceapa, ardeiul și usturoiul, apoi rumenește carnea.\n2. Adaugă condimentele, roșiile, fasolea și porumbul scurse.\n3. Fierbe 20 de minute. Servește cu orez fiert.',
+   kid: 'Gătește-l blând (doar boia dulce) și pune chili sau sos iute pe masă. El își face porția cât de iute vrea.'},
+  {id: 1106, name: 'Paste cu sos de roșii și legume „ascunse”', meal: 'principal', servings: 4, time: 30, cost: 18, tags: ['copii', 'vegetarian'],
+   ingredients: ['500 g paste integrale', '800 g roșii din conservă', '1 morcov', '1 dovlecel', '1 ceapă', '2 căței usturoi', '1 lingură ulei', '80 g cașcaval'],
+   steps: '1. Rade fin morcovul și dovlecelul și călește-le cu ceapa și usturoiul.\n2. Adaugă roșiile, fierbe 15 minute și pasează. Copiii nu mai văd legumele.\n3. Amestecă sosul cu pastele fierte și presară cașcaval ras.',
+   kid: 'Fă-i porția „arrabbiata”: căleşte 1–2 minute fulgi de chili în puțin ulei și amestecă-i în pastele lui.'},
+  {id: 1107, name: 'Pește la cuptor cu cartofi și salată de varză', meal: 'principal', servings: 4, time: 45, cost: 36, tags: ['proteine', 'omega-3'],
+   ingredients: ['600 g file de merluciu congelat', '1 kg cartofi', '1 lămâie', '2 linguri ulei', '1 legătură mărar', '500 g varză', '1 morcov', 'sare'],
+   steps: '1. Coace cartofii tăiați felii cu 1 lingură de ulei 20 de minute la 200°C.\n2. Așază peștele peste ei, cu sare, lămâie și mărar, și mai coace 15–20 de minute.\n3. Fă salata din varză și morcov rase, cu sare, lămâie și ulei.',
+   kid: 'Presară boia iute și usturoi pe fileul lui înainte de copt.'},
+  {id: 1108, name: 'Iahnie de fasole cu murături', meal: 'principal', servings: 4, time: 90, cost: 14, tags: ['vegetarian', 'de post'],
+   ingredients: ['500 g fasole albă uscată', '2 cepe', '2 morcovi', '2 linguri pastă de tomate', '1 linguriță boia dulce', '2 foi de dafin', '2 linguri ulei', '500 g murături'],
+   steps: '1. Ține fasolea la înmuiat peste noapte, apoi fierbe-o 60 de minute cu foile de dafin.\n2. Călește ceapa și morcovii în ulei, adaugă pasta de tomate și boiaua.\n3. Amestecă cu fasolea scursă și coace 15 minute sau fierbe la foc mic.',
+   kid: 'Ardei iute murat lângă porția lui.'},
+  {id: 1109, name: 'Mâncare de mazăre cu pui', meal: 'principal', servings: 4, time: 40, cost: 24, tags: ['copii', 'proteine'],
+   ingredients: ['600 g mazăre congelată', '500 g pulpe de pui dezosate', '1 ceapă', '1 morcov', '200 g roșii din conservă', '1 legătură mărar', '1 lingură ulei', 'sare'],
+   steps: '1. Rumenește puiul tăiat cubulețe, apoi adaugă ceapa și morcovul.\n2. Pune mazărea, roșiile și un pahar de apă și fierbe 20 de minute.\n3. Presară mărar la final.',
+   kid: 'Ardei iute tocat mărunt sau fulgi de chili în farfuria lui.'},
+  {id: 1110, name: 'Pilaf de pui cu legume', meal: 'principal', servings: 4, time: 40, cost: 24, tags: ['copii', 'proteine'],
+   ingredients: ['500 g pulpe de pui dezosate', '300 g orez', '1 ceapă', '2 morcovi', '1 ardei gras', '200 g mazăre congelată', '1 lingură ulei', '1 linguriță boia dulce', 'sare'],
+   steps: '1. Rumenește puiul tăiat cubulețe, apoi adaugă ceapa, morcovii și ardeiul.\n2. Pune orezul și călește-l 1 minut, apoi adaugă 700 ml apă, boiaua și sare.\n3. Adaugă mazărea și coace 20 de minute la 180°C, acoperit.',
+   kid: 'Sos iute (sriracha sau ajvar iute) alături, pentru porția lui.'},
+  {id: 1111, name: 'Chiftele de pui la cuptor cu piure și salată', meal: 'principal', servings: 4, time: 50, cost: 28, tags: ['copii', 'proteine'],
+   ingredients: ['500 g carne tocată de pui', '1 ou', '1 ceapă', '1 legătură pătrunjel', '1 kg cartofi', '200 ml lapte', '500 g varză', '1 morcov', '1 lingură ulei', 'sare'],
+   steps: '1. Amestecă carnea cu oul, ceapa rasă, pătrunjelul și sare, apoi formează chiftele.\n2. Coace-le pe hârtie de copt 25 de minute la 200°C, fără prăjire.\n3. Fă piure din cartofii fierți și lapte cald.\n4. Fă salata din varză și morcov.',
+   kid: 'Amestecă boia iute în 4–5 chiftele și marchează-le cu o scobitoare. Sunt „chiftelele lui”.'},
+  {id: 1112, name: 'Wrapuri cu pui picant și legume', meal: 'principal', servings: 4, time: 30, cost: 34, tags: ['picant', 'copii', 'rapid', 'proteine'],
+   ingredients: ['600 g piept de pui', '8 lipii integrale', '1 ardei gras', '1 castravete', '2 roșii', '400 g iaurt', '1 cățel usturoi', '1 linguriță boia afumată', '1 linguriță chimion', '1/2 linguriță chili'],
+   steps: '1. Taie puiul fâșii și condimentează cu boia, chimion și sare.\n2. Rumenește-l în tigaie 8–10 minute.\n3. Fă sosul din iaurt cu usturoi pisat.\n4. Fiecare își asamblează wrapul cu legume și sos.',
+   kid: 'Pune chili doar pe jumătate din pui, ca să ai pui iute și pui blând. Asamblarea la masă îi place mult copilului mofturos.'},
+  {id: 1113, name: 'Varză călită cu piept de pui', meal: 'principal', servings: 4, time: 50, cost: 20, tags: ['proteine'],
+   ingredients: ['1 varză', '400 g piept de pui', '1 ceapă', '2 linguri pastă de tomate', '1 linguriță boia dulce', '1 legătură mărar', '1 lingură ulei', 'sare, piper'],
+   steps: '1. Rumenește puiul cubulețe, apoi adaugă ceapa.\n2. Adaugă varza tăiată fideluță și călește 10 minute.\n3. Pune pasta de tomate, boiaua și puțină apă și fierbe acoperit 25 de minute.\n4. Presară mărar.',
+   kid: 'Boia iute sau ardei iute în porția lui. Merge excelent la varză.'},
+  {id: 1114, name: 'Ghiveci de legume cu orez', meal: 'principal', servings: 4, time: 50, cost: 18, tags: ['vegetarian', 'de post'],
+   ingredients: ['1 vânătă', '1 dovlecel', '2 ardei gras', '2 morcovi', '1 ceapă', '400 g roșii din conservă', '2 linguri ulei', '300 g orez', 'sare'],
+   steps: '1. Taie toate legumele cuburi și călește-le pe rând în ulei.\n2. Adaugă roșiile și fierbe acoperit 25 de minute.\n3. Servește cu orez fiert.',
+   kid: 'Ardei iute copt sau fulgi de chili deasupra.'},
+  {id: 1115, name: 'Curry de năut cu spanac și orez', meal: 'principal', servings: 4, time: 30, cost: 26, tags: ['picant', 'vegetarian', 'de post'],
+   ingredients: ['2 conserve năut', '400 ml lapte de cocos', '400 g roșii din conservă', '300 g spanac congelat', '1 ceapă', '2 căței usturoi', '1 lingură pudră de curry', '1/2 linguriță chili', '300 g orez'],
+   steps: '1. Călește ceapa și usturoiul, apoi adaugă curry-ul 1 minut.\n2. Pune roșiile, laptele de cocos și năutul scurs și fierbe 15 minute.\n3. Adaugă spanacul în ultimele 5 minute. Servește cu orez.',
+   kid: 'Pune chili-ul la final, doar în bolul lui. Curry-ul blând e pe gustul tuturor.'},
+  {id: 1116, name: 'Pizza de casă integrală cu legume', meal: 'principal', servings: 4, time: 90, cost: 28, tags: ['copii'],
+   ingredients: ['500 g făină integrală', '7 g drojdie uscată', '2 linguri ulei', '200 g pastă de tomate', '200 g mozzarella', '100 g șuncă slabă', '1 ardei gras', '150 g ciuperci'],
+   steps: '1. Frământă făina cu drojdia, uleiul, sare și 300 ml apă călduță și lasă la dospit 1 oră.\n2. Întinde aluatul în tavă și unge-l cu pastă de tomate.\n3. Pune toppingurile și coace 15 minute la 230°C.',
+   kid: 'Lasă copiii să-și „decoreze” fiecare sfertul lui. El poate pune ardei iute sau fulgi de chili.'},
+  {id: 1117, name: 'Tavă cu pulpe de pui și legume la cuptor', meal: 'principal', servings: 4, time: 60, cost: 26, tags: ['copii', 'proteine'],
+   ingredients: ['1 kg pulpe de pui', '1 kg cartofi', '3 morcovi', '2 cepe', '2 linguri ulei', '1 linguriță boia afumată', '1 linguriță rozmarin', 'sare'],
+   steps: '1. Taie legumele bucăți mari și pune-le în tavă cu puiul.\n2. Unge totul cu ulei, boia, rozmarin și sare.\n3. Coace 50 de minute la 200°C, întorcând o dată.',
+   kid: 'Freacă 1–2 pulpe cu boia iute și pune-le într-un colț al tăvii.'},
+  {id: 1118, name: 'Paste cu pui și broccoli', meal: 'principal', servings: 4, time: 30, cost: 28, tags: ['copii', 'proteine'],
+   ingredients: ['400 g paste integrale', '400 g broccoli congelat', '400 g piept de pui', '200 ml smântână 12%', '2 căței usturoi', '50 g cașcaval', '1 lingură ulei'],
+   steps: '1. Fierbe pastele, iar în ultimele 4 minute adaugă și broccoli în aceeași oală.\n2. Rumenește puiul cubulețe cu usturoiul.\n3. Adaugă smântâna și cașcavalul, apoi amestecă cu pastele.',
+   kid: 'Fulgi de chili deasupra porției lui.'},
+  {id: 1119, name: 'Salată de ton cu fasole și porumb', meal: 'principal', servings: 4, time: 15, cost: 30, tags: ['rapid', 'proteine', 'omega-3'],
+   ingredients: ['2 conserve ton', '1 conservă fasole albă', '1 conservă porumb', '1 ceapă roșie', '2 roșii', '1 castravete', '2 linguri ulei de măsline', '1 lămâie', '1 pâine integrală'],
+   steps: '1. Scurge tonul, fasolea și porumbul.\n2. Amestecă-le cu legumele tăiate, uleiul, zeama de lămâie și sare.\n3. Servește cu pâine integrală.',
+   kid: 'Un strop de sos iute sau ardei iute tocat în bolul lui.'},
+  {id: 1120, name: 'Quesadilla cu fasole și brânză', meal: 'principal', servings: 4, time: 25, cost: 26, tags: ['picant', 'copii', 'vegetarian', 'rapid'],
+   ingredients: ['8 lipii integrale', '1 conservă fasole roșie', '1 conservă porumb', '200 g cașcaval', '1 ardei gras', '1 linguriță chimion', '1/2 linguriță chili', '200 g iaurt'],
+   steps: '1. Zdrobește fasolea cu chimion și sare.\n2. Unge o lipie, adaugă porumb, ardei și cașcaval și acoperă cu altă lipie.\n3. Rumenește în tigaie uscată 2–3 minute pe fiecare parte. Servește cu iaurt.',
+   kid: 'Fă-i o salsa iute doar pentru el: roșie, ceapă și ardei iute tocate mărunt.'},
+  {id: 1121, name: 'Cartofi wedges picanți cu ochiuri și salată', meal: 'principal', servings: 4, time: 45, cost: 18, tags: ['picant', 'vegetarian'],
+   ingredients: ['1,2 kg cartofi', '8 ouă', '2 linguri ulei', '1 linguriță boia afumată', '1/2 linguriță chili', '500 g varză', '1 morcov', 'sare'],
+   steps: '1. Taie cartofii felii groase (wedges), unge-i cu ulei și boia și coace-i 35 de minute la 220°C.\n2. Fă ochiurile în tigaie.\n3. Fă salata din varză și morcov.',
+   kid: 'Fă o tavă mică doar cu chili pentru el. Ceilalți primesc wedges doar cu boia dulce.'},
+  {id: 1122, name: 'Supă de pui cu tăiței', meal: 'principal', servings: 4, time: 60, cost: 22, tags: ['copii'],
+   ingredients: ['500 g pulpe de pui', '2 morcovi', '1 păstârnac', '1 bucată țelină', '1 ceapă', '150 g tăiței', '1 legătură pătrunjel', 'sare'],
+   steps: '1. Fierbe puiul cu legumele în 2,5 l apă, la foc mic, 45 de minute, luând spuma.\n2. Scoate carnea, dezosează-o și pune-o înapoi.\n3. Adaugă tăițeii și fierbe 5 minute, apoi presară pătrunjel.',
+   kid: 'Ardei iute alături sau un strop de ulei cu chili în bolul lui.'},
+  {id: 1123, name: 'Tocăniță de cartofi cu ardei', meal: 'principal', servings: 4, time: 40, cost: 12, tags: ['vegetarian', 'de post'],
+   ingredients: ['1,5 kg cartofi', '1 ceapă', '1 ardei gras', '400 g roșii din conservă', '1 linguriță boia dulce', '2 foi de dafin', '2 linguri ulei', '1 legătură pătrunjel', 'sare'],
+   steps: '1. Călește ceapa și ardeiul în ulei.\n2. Adaugă cartofii cuburi, boiaua, roșiile, dafinul și apă cât să-i acopere.\n3. Fierbe 25 de minute, până se îngroașă sosul, apoi presară pătrunjel.',
+   kid: 'Boia iute sau ardei iute în porția lui. Merge foarte bine cu murături.'},
+  {id: 1124, name: 'Linte cu orez și ceapă caramelizată', meal: 'principal', servings: 4, time: 40, cost: 12, tags: ['vegetarian', 'de post', 'proteine'],
+   ingredients: ['250 g linte verde', '200 g orez', '3 cepe', '3 linguri ulei', '1 linguriță chimion', '400 g iaurt', 'sare'],
+   steps: '1. Fierbe lintea 15 minute, apoi adaugă orezul și încă 450 ml apă și fierbe acoperit 15 minute.\n2. Călește ceapa feliată în ulei la foc mic 15–20 de minute, până se caramelizează.\n3. Servește cu ceapa deasupra și iaurt alături (varianta de post se face fără iaurt).',
+   kid: 'Fulgi de chili prăjiți 30 de secunde în uleiul de la ceapă, turnați doar peste porția lui.'},
+  {id: 1125, name: 'Supă de roșii cu orez', meal: 'principal', servings: 4, time: 30, cost: 11, tags: ['vegetarian', 'de post', 'copii'],
+   ingredients: ['800 g roșii din conservă', '100 g orez', '1 ceapă', '1 morcov', '1 lingură ulei', '1 legătură pătrunjel', 'sare'],
+   steps: '1. Călește ceapa și morcovul ras în ulei.\n2. Adaugă roșiile și 1,2 l apă, fierbe 10 minute și pasează.\n3. Pune orezul și fierbe încă 15 minute, apoi presară pătrunjel.',
+   kid: 'Un strop de sos iute sau fulgi de chili deasupra.'},
+  {id: 1126, name: 'Fasole verde cu usturoi și ouă fierte', meal: 'principal', servings: 4, time: 25, cost: 16, tags: ['vegetarian', 'rapid', 'proteine'],
+   ingredients: ['1 kg fasole verde congelată', '4 căței usturoi', '6 ouă', '2 linguri ulei', '1 pâine integrală', 'sare'],
+   steps: '1. Fierbe fasolea 8–10 minute și ouăle 9 minute.\n2. Călește usturoiul în ulei 1 minut și amestecă-l cu fasolea.\n3. Servește cu ouă tăiate în sferturi și pâine.',
+   kid: 'Fulgi de chili în uleiul cu usturoi pentru porția lui.'},
+
+  // ---------- Gustări ----------
+  {id: 1201, name: 'Humus cu bastonașe de legume', meal: 'gustare', servings: 4, time: 15, cost: 14, tags: ['vegetarian', 'de post'],
+   ingredients: ['1 conservă năut', '2 linguri ulei de măsline', '1 lămâie', '1 cățel usturoi', '3 morcovi', '1 castravete', '1 ardei gras', 'sare'],
+   steps: '1. Pasează năutul cu uleiul, zeama de lămâie, usturoiul, sare și 3–4 linguri de apă.\n2. Taie legumele bastonașe.',
+   kid: 'Boia iute deasupra humusului lui.'},
+  {id: 1202, name: 'Brioșe cu banane și ovăz, fără zahăr', meal: 'gustare', servings: 4, time: 30, cost: 10, tags: ['copii', 'vegetarian'],
+   ingredients: ['3 banane', '2 ouă', '200 g fulgi de ovăz', '100 ml lapte', '1 linguriță praf de copt', '50 g stafide'],
+   steps: '1. Zdrobește bananele și amestecă-le cu ouăle și laptele.\n2. Adaugă ovăzul, praful de copt și stafidele.\n3. Coace în forme de brioșe 20 de minute la 180°C. Ies 12 bucăți.',
+   kid: 'Lasă-l să le decoreze cu ce vrea înainte de copt (nuci, bucăți de măr).'},
+  {id: 1203, name: 'Popcorn picant de casă', meal: 'gustare', servings: 4, time: 10, cost: 5, tags: ['picant', 'copii', 'de post'],
+   ingredients: ['100 g porumb pentru floricele', '1 lingură ulei', '1 linguriță boia afumată', '1/4 linguriță chili', 'sare'],
+   steps: '1. Încinge uleiul într-o oală cu capac și pune porumbul.\n2. Agită oala până se opresc pocniturile.\n3. Condimentează cât e cald.',
+   kid: 'Fă două boluri, unul cu chili pentru el și unul doar cu sare. Gustarea lui preferată la film.'},
+  {id: 1204, name: 'Mere coapte cu scorțișoară și nuci', meal: 'gustare', servings: 4, time: 30, cost: 8, tags: ['copii', 'vegetarian', 'de post'],
+   ingredients: ['4 mere', '30 g nuci', '1 lingură miere', '1 linguriță scorțișoară'],
+   steps: '1. Scobește merele și umple-le cu nuci, miere și scorțișoară.\n2. Coace 25 de minute la 180°C.',
+   kid: 'Încearcă un praf de chili peste scorțișoară. Dulce-iute e o combinație care le place multor copii care iubesc iuteala.'},
+  {id: 1205, name: 'Năut crocant la cuptor', meal: 'gustare', servings: 4, time: 40, cost: 7, tags: ['picant', 'de post', 'proteine'],
+   ingredients: ['1 conservă năut', '1 lingură ulei', '1 linguriță boia afumată', '1/4 linguriță chili', 'sare'],
+   steps: '1. Scurge și usucă bine năutul cu un prosop.\n2. Amestecă-l cu ulei și condimente.\n3. Coace 30–35 de minute la 200°C, până devine crocant.',
+   kid: 'Varianta lui cu chili dublu, iar pentru ceilalți doar boia dulce.'},
+  {id: 1206, name: 'Iaurt cu fructe și nuci', meal: 'gustare', servings: 4, time: 5, cost: 10, tags: ['copii', 'vegetarian', 'rapid'],
+   ingredients: ['800 g iaurt', '2 banane', '2 mere', '30 g nuci'],
+   steps: '1. Taie fructele cubulețe și amestecă-le cu iaurtul și nucile.',
+   kid: 'Lasă-l să aleagă fructele și să-și facă singur paharul.'},
+];
+let R = load(K.food, () => ({recipes: SAMPLE_RECIPES, picked: {}, checked: {}}), v => Array.isArray(v.recipes));
+R.picked ||= {}; R.checked ||= {};
+const saveB = () => store(K.budget, B), saveR = () => store(K.food, R);
+
+/* ================= Navigation ================= */
+let view = 'home';
+function go(v) {
+  view = v;
+  document.body.dataset.view = v;
+  document.querySelectorAll('nav.side button').forEach(b => b.classList.toggle('on', b.dataset.go === v));
+  document.querySelectorAll('.view').forEach(s => s.classList.toggle('on', s.id === 'view-' + v));
+  if (v === 'home') renderHome();
+  window.scrollTo({top: 0});
+  try { location.hash = v; } catch {}
+}
+document.addEventListener('click', ev => {
+  const g = ev.target.closest('[data-go]'); if (g) go(g.dataset.go);
+  const q = ev.target.closest('[data-quick]');
+  if (q) {
+    const v = q.dataset.quick;
+    if (v === 'budget') { go('budget'); $('bAmount').focus(); }
+    if (v === 'recipes') { go('recipes'); rReset(); rSub('edit'); $('rName').focus(); }
+    if (v === 'plan') { go('recipes'); rSub('plan'); }
+    if (v === 'shop') { go('recipes'); rSub('shop'); }
+  }
+});
+
+/* ================= HOME ================= */
+function renderHome() {
+  const h = new Date().getHours();
+  $('hello').textContent = h < 12 ? 'Bună dimineața!' : h < 18 ? 'Bună ziua!' : 'Bună seara!';
+  const ds = new Date().toLocaleDateString('ro-RO', {weekday: 'long', day: 'numeric', month: 'long'});
+  $('helloSub').textContent = ds[0].toUpperCase() + ds.slice(1) + ' · iată rezumatul tău.';
+
+  // budget
+  const m = ym(today());
+  const inM = B.expenses.filter(e => ym(e.date) === m);
+  const total = inM.reduce((s, e) => s + e.amount, 0);
+  const byCat = {}; inM.forEach(e => byCat[e.category] = (byCat[e.category] || 0) + e.amount);
+  const top = Object.entries(byCat).sort((a, b) => b[1] - a[1]).slice(0, 3);
+  $('homeBudget').innerHTML = `<div class="big">${money(total)}</div><div class="line">cheltuiți în ${monthName(m, true)} · ${inM.length} ${inM.length === 1 ? 'cheltuială' : 'cheltuieli'}</div>
+    ${top.length ? `<div class="mini">${top.map(([c, v]) => `<div><span>${esc(c)}</span><span class="bar"><i style="width:${(v / top[0][1] * 100).toFixed(0)}%"></i></span></div>`).join('')}</div>` : ''}
+    <div class="line" style="margin-top:10px">🛒 Mâncare: <strong style="color:var(--text)">${lei(foodSpent(m))}</strong> din ${lei(R.settings.budget)}</div>
+    <div class="more">${inM.length ? 'Vezi rezumatul lunar →' : 'Adaugă prima cheltuială →'}</div>`;
+
+  // recipes: today's menu
+  const list = buildShopList();
+  const left = list.filter(it => !R.checked[it.key]).length;
+  const d = R.plan?.days[todayIdx()];
+  const menuLine = d ? activeSlots().map(([k, label]) => { const r = rById(d[k]); return r ? `<div class="line">${label}: <strong style="color:var(--text)">${esc(r.name)}</strong>${isSpicy(r) ? ' 🌶' : ''}</div>` : ''; }).join('') : '';
+  $('homeFood').innerHTML = `<div class="big" style="font-size:20px">Meniul de azi</div>
+    ${menuLine || '<div class="line">Niciun meniu generat încă.</div>'}
+    <div class="line" style="margin-top:10px">${list.length ? `🛒 ${left} ${left === 1 ? 'produs rămas' : 'produse rămase'} pe lista de cumpărături` : `${R.recipes.length} rețete în colecție`}</div>
+    <div class="more">Vezi meniul săptămânii →</div>`;
+}
+
+/* ================= BUDGET ================= */
+$('bDate').value = today();
+$('bMonth').value = ym(today());
+
+function bRenderCats() {
+  $('bCat').innerHTML = B.categories.map(c => `<option>${esc(c)}</option>`).join('');
+  const f = $('bFilter').value;
+  $('bFilter').innerHTML = '<option value="">Toate categoriile</option>' + B.categories.map(c => `<option ${c === f ? 'selected' : ''}>${esc(c)}</option>`).join('');
+  $('bCats').innerHTML = B.categories.map((c, i) => `<span class="chip">${esc(c)}<button class="x" data-bcat="${i}" title="Șterge">×</button></span>`).join('');
+}
+
+function bRender() {
+  const m = $('bMonth').value || ym(today());
+  const inM = B.expenses.filter(e => ym(e.date) === m);
+  const total = inM.reduce((s, e) => s + e.amount, 0);
+  const [y, mo] = m.split('-').map(Number);
+  const days = m === ym(today()) ? new Date().getDate() : new Date(y, mo, 0).getDate();
+  const byCat = {}; inM.forEach(e => byCat[e.category] = (byCat[e.category] || 0) + e.amount);
+  const sorted = Object.entries(byCat).sort((a, b) => b[1] - a[1]);
+  const prev = B.expenses.filter(e => ym(e.date) === shiftMonth(m, -1)).reduce((s, e) => s + e.amount, 0);
+  const diff = prev ? (total - prev) / prev * 100 : null;
+
+  $('bStats').innerHTML = [
+    [money(total), 'Total cheltuit'], [inM.length, 'Cheltuieli'], [money(total / days), 'Medie pe zi'],
+    [sorted[0] ? esc(sorted[0][0]) : '—', 'Categoria principală'],
+    [diff === null ? '—' : (diff >= 0 ? '+' : '') + diff.toFixed(0) + '%', 'față de luna trecută'],
+  ].map(([v, l]) => `<div class="stat"><b>${v}</b><span>${l}</span></div>`).join('');
+
+  // food spending, linked to Recipes (menu budget + groceries bought from the shopping list)
+  const fb = R.settings.budget, fs = foodSpent(m), fromList = inM.filter(e => e.source === 'retete').reduce((s, e) => s + e.amount, 0);
+  const fover = fs > fb;
+  $('bFood').innerHTML = `<div class="head"><h2>🛒 Mâncare (legat de Rețete)</h2><button class="ghost small" data-quick="plan">Vezi meniul →</button></div>
+    <div class="stats">${[
+      [lei(fs), 'Cheltuit pe mâncare'], [lei(fb), 'Buget mâncare (din Meniu)'],
+      [fover ? '−' + lei(fs - fb) : lei(fb - fs), fover ? 'Peste buget' : 'Rămas'], [lei(fromList), 'Din lista de cumpărături'],
+    ].map(([v, l]) => `<div class="stat"><b>${v}</b><span>${l}</span></div>`).join('')}</div>
+    <div class="meter ${fover ? 'over' : ''}"><i style="width:${Math.min(100, fs / fb * 100).toFixed(1)}%"></i></div>
+    <div class="hint">Când apeși „Adaugă în Buget” în Rețete → Cumpărături, suma apare aici automat. Cheltuielile puse manual la categoria „${esc(B.categories.find(c => FOOD_CATS.includes(c)) || 'Mâncare')}” se adună și ele.</div>`;
+
+  $('bByCat').innerHTML = sorted.length ? sorted.map(([c, v]) =>
+    `<div class="bar-row"><span>${esc(c)}</span><div class="bar"><i style="width:${(v / sorted[0][1] * 100).toFixed(1)}%"></i></div><span class="amt">${money(v)} <small class="muted">${(v / total * 100).toFixed(0)}%</small></span></div>`
+  ).join('') : '<div class="empty">Nicio cheltuială luna aceasta.</div>';
+
+  const months = [-5, -4, -3, -2, -1, 0].map(k => shiftMonth(m, k));
+  const totals = months.map(mm => B.expenses.filter(e => ym(e.date) === mm).reduce((s, e) => s + e.amount, 0));
+  const max = Math.max(...totals, 1);
+  $('bTrend').innerHTML = months.map((mm, i) =>
+    `<div class="${mm === m ? 'cur' : ''}" title="${money(totals[i])}"><small>${totals[i] ? Math.round(totals[i]) : ''}</small><i style="height:${(totals[i] / max * 100).toFixed(1)}%"></i>${monthName(mm)}</div>`).join('');
+
+  const fc = $('bFilter').value;
+  const rows = inM.filter(e => !fc || e.category === fc).sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id);
+  $('bList').innerHTML = rows.length ? rows.map(e =>
+    `<tr><td>${shortDate(e.date)}</td><td><span class="catdot"></span>${esc(e.category)}</td><td>${esc(e.note || '')}</td><td class="amt">${money(e.amount)}</td><td><button class="x" data-bdel="${e.id}" title="Șterge">×</button></td></tr>`
+  ).join('') : '<tr><td colspan="5" class="empty">Nimic aici încă.</td></tr>';
+}
+
+$('bForm').addEventListener('submit', ev => {
+  ev.preventDefault();
+  const amount = parseFloat($('bAmount').value);
+  if (!(amount > 0)) return;
+  B.expenses.push({id: Date.now(), date: $('bDate').value, amount, category: $('bCat').value, note: $('bNote').value.trim()});
+  saveB();
+  $('bMonth').value = ym($('bDate').value);
+  $('bAmount').value = ''; $('bNote').value = ''; $('bAmount').focus();
+  bRender(); toast(`Adăugat: ${money(amount)} la ${B.expenses.at(-1).category}`);
+});
+$('bList').addEventListener('click', ev => {
+  const id = ev.target.dataset.bdel;
+  if (!id || !confirm('Ștergi această cheltuială?')) return;
+  B.expenses = B.expenses.filter(e => e.id !== Number(id)); saveB(); bRender(); toast('Cheltuială ștearsă');
+});
+$('bCatForm').addEventListener('submit', ev => {
+  ev.preventDefault();
+  const name = $('bNewCat').value.trim();
+  if (name && !B.categories.some(c => c.toLowerCase() === name.toLowerCase())) { B.categories.push(name); saveB(); bRenderCats(); toast(`Categoria „${name}” a fost adăugată`); }
+  $('bNewCat').value = '';
+});
+$('bCats').addEventListener('click', ev => {
+  const i = ev.target.dataset.bcat; if (i === undefined) return;
+  const name = B.categories[i];
+  const used = B.expenses.filter(e => e.category === name).length;
+  if (B.categories.length === 1) return toast('Păstrează cel puțin o categorie');
+  if (!confirm(used ? `Categoria „${name}” e folosită de ${used} cheltuieli. Vor fi mutate la „Altele”. O ștergi?` : `Ștergi categoria „${name}”?`)) return;
+  B.categories.splice(i, 1);
+  if (used) { if (!B.categories.includes('Altele')) B.categories.push('Altele'); B.expenses.forEach(e => { if (e.category === name) e.category = 'Altele'; }); }
+  saveB(); bRenderCats(); bRender();
+});
+$('bMonth').addEventListener('change', bRender);
+$('bFilter').addEventListener('change', bRender);
+$('bPrev').onclick = () => { $('bMonth').value = shiftMonth($('bMonth').value || ym(today()), -1); bRender(); };
+$('bNext').onclick = () => { $('bMonth').value = shiftMonth($('bMonth').value || ym(today()), 1); bRender(); };
+$('bCsv').onclick = () => {
+  const q = s => `"${String(s).replace(/"/g, '""')}"`;
+  const lines = ['data,categorie,suma,nota', ...B.expenses.slice().sort((a, b) => a.date.localeCompare(b.date)).map(e => [e.date, q(e.category), e.amount.toFixed(2), q(e.note || '')].join(','))];
+  download(`cheltuieli-${today()}.csv`, lines.join('\n'), 'text/csv');
+};
+
+/* ================= RECIPES ================= */
+let rEditing = null;
+const MEAL_LABEL = {'mic dejun': 'Mic dejun', principal: 'Prânz / cină', gustare: 'Gustare'};
+const MEAL_ORDER = {'mic dejun': 0, principal: 1, gustare: 2};
+const isSpicy = r => r.tags.some(t => t.toLowerCase().startsWith('picant'));
+const lei = n => (Math.round(n * 10) / 10).toLocaleString('ro-RO') + ' lei';
+const rById = id => R.recipes.find(r => r.id === Number(id));
+
+/* ---- link with Budget: groceries are recorded as food expenses ---- */
+const FOOD_CATS = ['Mâncare', 'Food'];
+function foodCategory() {
+  const c = B.categories.find(x => FOOD_CATS.includes(x));
+  if (c) return c;
+  B.categories.unshift('Mâncare'); saveB(); bRenderCats();
+  return 'Mâncare';
+}
+const isFood = e => FOOD_CATS.includes(e.category) || e.source === 'retete';
+const foodSpent = month => B.expenses.filter(e => ym(e.date) === month && isFood(e)).reduce((s, e) => s + e.amount, 0);
+
+function rSub(name) {
+  document.querySelectorAll('#rSeg button').forEach(b => b.classList.toggle('on', b.dataset.sub === name));
+  document.querySelectorAll('[data-rsub]').forEach(d => d.classList.toggle('hidden', d.dataset.rsub !== name));
+  if (name === 'plan') renderPlan(); // refresh "already spent" with the latest Budget data
+}
+$('rSeg').addEventListener('click', ev => {
+  const b = ev.target.closest('button'); if (!b) return;
+  if (b.dataset.sub === 'edit' && rEditing === null) rReset();
+  rSub(b.dataset.sub);
+});
+
+/* adds the recipe collection once, keeps the user's own recipes and edits */
+function rMigrate() {
+  R.picked ||= {}; R.checked ||= {};
+  R.settings = {budget: 1750, persons: 4, reserve: 15, snacks: false, ...(R.settings || {})};
+  if ((R.libVersion || 0) < LIB_VERSION) {
+    const have = new Set(R.recipes.map(r => r.id));
+    LIBRARY.forEach(r => { if (!have.has(r.id)) R.recipes.push(JSON.parse(JSON.stringify(r))); });
+    const s1 = R.recipes.find(r => r.id === 1), s2 = R.recipes.find(r => r.id === 2);
+    if (s1 && !s1.meal) Object.assign(s1, {meal: 'principal', cost: 12});
+    if (s2 && !s2.meal) Object.assign(s2, {meal: 'mic dejun', cost: 6});
+    R.libVersion = LIB_VERSION;
+  }
+  if (!R.plan) generatePlan(true);
+  saveR();
+}
+
+/* ---- ingredient parsing ---- */
+const UNITS = {g: 'g', gram: 'g', grame: 'g', grams: 'g', kg: 'kg', ml: 'ml', l: 'l', litru: 'l', litri: 'l', liter: 'l', litre: 'l',
+  tsp: 'tsp', teaspoon: 'tsp', teaspoons: 'tsp', 'linguriță': 'tsp', 'lingurițe': 'tsp', 'lgț': 'tsp',
+  tbsp: 'tbsp', tablespoon: 'tbsp', tablespoons: 'tbsp', 'lingură': 'tbsp', linguri: 'tbsp', lg: 'tbsp',
+  cup: 'cup', cups: 'cup', 'cană': 'cup', 'căni': 'cup', oz: 'oz', lb: 'lb', lbs: 'lb',
+  clove: 'clove', cloves: 'clove', 'cățel': 'clove', 'căței': 'clove', can: 'can', cans: 'can', 'conservă': 'can', conserve: 'can',
+  pinch: 'pinch', praf: 'pinch', slice: 'slice', slices: 'slice', felie: 'slice', felii: 'slice',
+  bunch: 'bunch', 'legătură': 'bunch', 'legături': 'bunch', pc: 'pc', pcs: 'pc', buc: 'pc', 'bucată': 'pc', 'bucăți': 'pc'};
+const UNIT_LABEL = {tsp: ['linguriță', 'lingurițe'], tbsp: ['lingură', 'linguri'], cup: ['cană', 'căni'], clove: ['cățel', 'căței'], can: ['conservă', 'conserve'],
+  pinch: ['praf', 'prafuri'], slice: ['felie', 'felii'], bunch: ['legătură', 'legături'], pc: ['bucată', 'bucăți']};
+const unitLabel = (u, q) => UNIT_LABEL[u] ? UNIT_LABEL[u][q <= 1 ? 0 : 1] : u;
+function parseQty(s) {
+  s = s.replace(',', '.');
+  if (/^\d+\s+\d+\/\d+$/.test(s)) { const [w, f] = s.split(/\s+/); return +w + parseQty(f); }
+  if (/^\d+\/\d+$/.test(s)) { const [a, b] = s.split('/'); return +a / +b; }
+  return parseFloat(s);
+}
+function parseIngredient(line) {
+  const m = line.trim().match(/^(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*([a-zA-ZăâîșțşţĂÂÎȘȚ]+\.?)?\s*(.*)$/);
+  if (!m) return {qty: null, unit: '', name: line.trim()};
+  let unit = '', name = m[3];
+  const u = (m[2] || '').replace('.', '').toLowerCase();
+  if (UNITS[u] && name) unit = UNITS[u]; else name = ((m[2] || '') + ' ' + name).trim();
+  return {qty: parseQty(m[1]), unit, name: name.replace(/^(of|de)\s+/i, '').trim()};
+}
+/* rough Romanian/English singular-plural folding so "1 morcov" and "2 morcovi" merge */
+const IRREGULAR = {cepe: 'ceapă', mere: 'măr', 'ouă': 'ou'};
+const normName = n => n.toLowerCase().replace(/\s+/g, ' ').trim().split(' ')
+  .map(w => (IRREGULAR[w] || w).replace(/(uri|ii|ie|es|i|e|ă|a|s)$/, '')).join(' ');
+const fmtQty = q => Math.abs(q - Math.round(q)) < 0.01 ? String(Math.round(q)) : String(Math.round(q * 100) / 100).replace('.', ',');
+
+/* ---- browse ---- */
+function rRenderResults() {
+  const terms = $('rQIng').value.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
+  const mode = $('rQMode').value, text = $('rQText').value.trim().toLowerCase();
+  const meal = $('rQMeal').value, spicy = $('rQSpicy').checked, cheap = $('rQCheap').checked;
+  const res = R.recipes.map(r => ({r, matched: terms.filter(t => r.ingredients.some(i => i.toLowerCase().includes(t)))}))
+    .filter(({r, matched}) => {
+      if (terms.length && (mode === 'all' ? matched.length < terms.length : !matched.length)) return false;
+      if (text && !(r.name.toLowerCase().includes(text) || r.tags.some(t => t.toLowerCase().includes(text)))) return false;
+      if (meal && r.meal !== meal) return false;
+      if (spicy && !isSpicy(r)) return false;
+      if (cheap && !(r.cost && r.cost / r.servings <= 5)) return false;
+      return true;
+    }).sort((a, b) => b.matched.length - a.matched.length || (MEAL_ORDER[a.r.meal] ?? 3) - (MEAL_ORDER[b.r.meal] ?? 3) || a.r.name.localeCompare(b.r.name));
+  $('rCount').textContent = `${res.length} ${res.length === 1 ? 'rețetă' : 'rețete'}`;
+  $('rResults').innerHTML = res.length ? res.map(({r, matched}) => {
+    const on = r.id in R.picked;
+    return `<article class="card">
+      <div class="recipe-head">
+        <div><h3>${esc(r.name)}${isSpicy(r) ? ' 🌶' : ''}</h3>
+          <div class="meta">${r.meal ? MEAL_LABEL[r.meal] + ' · ' : ''}${r.servings} ${r.servings > 1 ? 'porții' : 'porție'}${r.time ? ' · ' + r.time + ' min' : ''}${r.cost ? ` · <span class="cost">≈ ${lei(r.cost)}</span> (${lei(r.cost / r.servings)}/porție)` : ''}${terms.length ? ` · ai ${matched.length} din ${terms.length}` : ''}</div>
+          <div>${r.tags.map(t => `<span class="tag">${esc(t)}</span>`).join('')}</div></div>
+        <div class="actions">
+          <button class="small ${on ? 'ghost' : ''}" data-ract="pick" data-id="${r.id}">${on ? '✓ Pe listă' : '+ Lista de cumpărături'}</button>
+          <button class="ghost small" data-ract="edit" data-id="${r.id}">Editează</button>
+          <button class="ghost small danger" data-ract="del" data-id="${r.id}">Șterge</button>
+        </div>
+      </div>
+      <details ${terms.length ? 'open' : ''}><summary>Ingrediente și pași</summary>
+        <ul class="ings">${r.ingredients.map(i => `<li class="${terms.some(t => i.toLowerCase().includes(t)) ? 'hit' : ''}">${esc(i)}</li>`).join('')}</ul>
+        ${r.steps ? `<div class="steps">${esc(r.steps)}</div>` : ''}
+        ${r.kid ? `<div class="kid">🌶 <strong>Pentru cel mofturos:</strong> ${esc(r.kid)}</div>` : ''}
+      </details></article>`;
+  }).join('') : `<div class="card empty">${R.recipes.length ? 'Nicio rețetă nu se potrivește căutării.' : 'Nicio rețetă încă. Adaugă una cu „Adaugă”.'}</div>`;
+}
+$('rResults').addEventListener('click', ev => {
+  const b = ev.target.closest('button[data-ract]'); if (!b) return;
+  const id = Number(b.dataset.id), r = rById(id);
+  if (b.dataset.ract === 'pick') {
+    if (id in R.picked) { delete R.picked[id]; toast('Scos de pe lista de cumpărături'); } else { R.picked[id] = R.settings.persons || r.servings; toast('Adăugat pe lista de cumpărături 🛒'); }
+    saveR(); rRenderAll();
+  } else if (b.dataset.ract === 'edit') rStartEdit(r);
+  else if (b.dataset.ract === 'del' && confirm(`Ștergi rețeta „${r.name}”?`)) {
+    R.recipes = R.recipes.filter(x => x.id !== id); delete R.picked[id]; saveR(); rRenderAll(); toast('Rețetă ștearsă');
+  }
+});
+['rQIng', 'rQText'].forEach(id => $(id).addEventListener('input', rRenderResults));
+['rQMode', 'rQMeal', 'rQSpicy', 'rQCheap'].forEach(id => $(id).addEventListener('change', rRenderResults));
+function openRecipe(id) {
+  const r = rById(id); if (!r) return;
+  $('rQIng').value = ''; $('rQMeal').value = ''; $('rQSpicy').checked = false; $('rQCheap').checked = false;
+  $('rQText').value = r.name;
+  rSub('browse'); rRenderResults();
+  const d = $('rResults').querySelector('details'); if (d) d.open = true;
+  window.scrollTo({top: 0});
+}
+
+/* ---- add / edit ---- */
+function rReset() { rEditing = null; $('rForm').reset(); $('rFormTitle').textContent = 'Adaugă rețetă'; $('rEditTab').textContent = 'Adaugă'; }
+function rStartEdit(r) {
+  rEditing = r.id;
+  $('rName').value = r.name; $('rServ').value = r.servings; $('rTime').value = r.time || '';
+  $('rMeal').value = r.meal || ''; $('rCost').value = r.cost ?? ''; $('rKid').value = r.kid || '';
+  $('rTags').value = r.tags.join(', '); $('rIngs').value = r.ingredients.join('\n'); $('rSteps').value = r.steps || '';
+  $('rFormTitle').textContent = 'Editează rețeta'; $('rEditTab').textContent = 'Editează';
+  rSub('edit'); window.scrollTo({top: 0});
+}
+$('rForm').addEventListener('submit', ev => {
+  ev.preventDefault();
+  const cost = parseFloat($('rCost').value);
+  const r = {
+    id: rEditing ?? Date.now(), name: $('rName').value.trim(),
+    servings: Math.max(1, parseInt($('rServ').value, 10) || 1), time: parseInt($('rTime').value, 10) || null,
+    meal: $('rMeal').value || null, cost: cost >= 0 ? cost : null, kid: $('rKid').value.trim(),
+    tags: $('rTags').value.split(',').map(t => t.trim()).filter(Boolean),
+    ingredients: $('rIngs').value.split('\n').map(l => l.trim()).filter(Boolean), steps: $('rSteps').value.trim(),
+  };
+  if (!r.name || !r.ingredients.length) return;
+  const i = R.recipes.findIndex(x => x.id === r.id);
+  if (i >= 0) R.recipes[i] = r; else R.recipes.push(r);
+  saveR(); toast(i >= 0 ? 'Rețetă actualizată' : `„${r.name}” a fost salvată`); rReset(); rRenderAll(); rSub('browse');
+});
+$('rCancel').onclick = () => { rReset(); rSub('browse'); };
+
+/* ---- weekly menu within budget ---- */
+const DAY_NAMES = ['Luni', 'Marți', 'Miercuri', 'Joi', 'Vineri', 'Sâmbătă', 'Duminică'];
+const SLOTS = [['b', 'Mic dejun', 'mic dejun'], ['l', 'Prânz', 'principal'], ['d', 'Cină', 'principal'], ['s', 'Gustare', 'gustare']];
+const activeSlots = () => SLOTS.filter(([k]) => k !== 's' || R.settings.snacks);
+const costFor = r => r && r.cost ? r.cost * R.settings.persons / r.servings : 0;
+const dayCost = d => activeSlots().reduce((t, [k]) => t + costFor(rById(d[k])), 0);
+const planCost = days => days.reduce((s, d) => s + dayCost(d), 0);
+const weekTarget = () => R.settings.budget * (1 - R.settings.reserve / 100) * 7 / 30;
+const mealPool = type => R.recipes.filter(r => r.meal === type && r.cost);
+const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const todayIdx = () => (new Date().getDay() + 6) % 7;
+
+function generatePlan(silent) {
+  const P = {b: mealPool('mic dejun'), l: mealPool('principal'), d: mealPool('principal'), s: mealPool('gustare')};
+  if (!P.b.length || P.l.length < 2) { if (!silent) toast('Ai nevoie de rețete cu tip de masă și cost'); return; }
+  const target = weekTarget();
+  let best = null;
+  for (let attempt = 0; attempt < 60; attempt++) {
+    const used = {};
+    const take = (list, avoid) => {
+      const r = shuffle(list).filter(x => x.id !== avoid).sort((a, b) => (used[a.id] || 0) - (used[b.id] || 0))[0];
+      if (r) used[r.id] = (used[r.id] || 0) + 1;
+      return r ? r.id : null;
+    };
+    const days = DAY_NAMES.map(() => { const d = {b: take(P.b)}; d.l = take(P.l); d.d = take(P.d, d.l); d.s = take(P.s); return d; });
+    const uses = id => days.reduce((n, d) => n + ['b', 'l', 'd', 's'].filter(k => d[k] === id).length, 0);
+    // over budget? swap the most expensive meals for cheaper ones (a main can appear at most twice a week)
+    for (let guard = 0; planCost(days) > target && guard < 150; guard++) {
+      const slots = [];
+      days.forEach((d, i) => activeSlots().forEach(([k]) => slots.push({i, k, c: costFor(rById(d[k]))})));
+      slots.sort((a, b) => b.c - a.c);
+      let changed = false;
+      for (const sl of slots) {
+        const day = days[sl.i], other = sl.k === 'l' ? day.d : sl.k === 'd' ? day.l : null;
+        const isMain = sl.k === 'l' || sl.k === 'd', cand = shuffle(P[sl.k]).filter(r => costFor(r) < sl.c && r.id !== other);
+        // prefer variety; if the budget is tight allow one more repeat (a big pot of soup lasts 3 days)
+        const alt = cand.find(r => uses(r.id) < (isMain ? 2 : 3)) || cand.find(r => uses(r.id) < (isMain ? 3 : 4));
+        if (alt) { day[sl.k] = alt.id; changed = true; break; }
+      }
+      if (!changed) break;
+    }
+    const cost = planCost(days);
+    const variety = new Set(days.flatMap(d => [d.b, d.l, d.d])).size;
+    const spicyMains = days.flatMap(d => [d.l, d.d]).filter(id => isSpicy(rById(id))).length;
+    const score = (cost <= target ? 1000 : -cost) + variety + Math.min(spicyMains, 4);
+    if (!best || score > best.score) best = {days, score};
+  }
+  R.plan = {created: today(), days: best.days};
+  saveR();
+  if (!silent) { renderPlan(); renderHome(); toast('Meniu nou generat'); }
+}
+
+function renderPlan() {
+  const st = R.settings;
+  $('pBudget').value = st.budget; $('pPersons').value = st.persons; $('pReserve').value = st.reserve; $('pSnacks').checked = st.snacks;
+  if (!R.plan) { $('pSummary').innerHTML = '<div class="empty">Apasă „Generează alt meniu”.</div>'; $('pDays').innerHTML = ''; return; }
+  const week = planCost(R.plan.days), month = week * 30 / 7, reserve = st.budget * st.reserve / 100, total = month + reserve;
+  const spent = foodSpent(ym(today())), over = total > st.budget;
+  $('pSummary').innerHTML = `<div class="stats">${[
+      [lei(week), 'Mese pe săptămână'],
+      [lei(month), 'Mese pe lună (estimat)'],
+      [lei(reserve), `Rezervă ${st.reserve}% (pâine, fructe…)`],
+      [lei(total), `Total estimat din ${lei(st.budget)}`],
+    ].map(([v, l]) => `<div class="stat"><b>${v}</b><span>${l}</span></div>`).join('')}</div>
+    <div class="meter ${over ? 'over' : ''}"><i style="width:${Math.min(100, total / st.budget * 100).toFixed(1)}%"></i></div>
+    <div class="${over ? 'over-msg' : 'ok-msg'}">${over ? `⚠ Depășește bugetul cu ${lei(total - st.budget)}. Apasă „Generează alt meniu” sau schimbă câteva mese cu ↻.` : `✓ Încape în buget, îți rămân ${lei(st.budget - total)}.`}</div>
+    <div class="meta" style="margin-top:8px">Cheltuit deja pe mâncare luna aceasta (din Buget): <strong>${lei(spent)}</strong> · rămas: <strong>${lei(Math.max(0, st.budget - spent))}</strong> · ≈ ${lei(week / 7 / st.persons)} de persoană pe zi</div>`;
+  const ti = todayIdx();
+  $('pDays').innerHTML = R.plan.days.map((d, i) => `<div class="dayc ${i === ti ? 'today' : ''}">
+    <h3><span>${DAY_NAMES[i]}${i === ti ? ' <span class="tag">azi</span>' : ''}</span><span class="meta">${lei(dayCost(d))}</span></h3>
+    ${activeSlots().map(([k, label]) => { const r = rById(d[k]); return `<div class="meal"><span class="mt">${label}</span>
+      <a data-open="${r ? r.id : ''}">${r ? esc(r.name) + (isSpicy(r) ? ' 🌶' : '') : '—'}</a>
+      <span class="meta">${r ? lei(costFor(r)) : ''} <button class="x" data-swap="${i}|${k}" title="Schimbă cu altă rețetă">↻</button></span></div>`; }).join('')}
+  </div>`).join('');
+}
+$('pDays').addEventListener('click', ev => {
+  const sw = ev.target.closest('[data-swap]');
+  if (sw) {
+    const [i, k] = sw.dataset.swap.split('|'), day = R.plan.days[i];
+    const other = k === 'l' ? day.d : k === 'd' ? day.l : null;
+    const alt = shuffle(mealPool(SLOTS.find(s => s[0] === k)[2])).find(r => r.id !== day[k] && r.id !== other);
+    if (alt) { day[k] = alt.id; saveR(); renderPlan(); renderHome(); }
+    return;
+  }
+  const op = ev.target.closest('[data-open]');
+  if (op && op.dataset.open) openRecipe(Number(op.dataset.open));
+});
+['pBudget', 'pPersons', 'pReserve', 'pSnacks'].forEach(id => $(id).addEventListener('change', () => {
+  const st = R.settings;
+  st.budget = Math.max(100, parseFloat($('pBudget').value) || 1750);
+  st.persons = Math.max(1, parseInt($('pPersons').value, 10) || 4);
+  st.reserve = Math.min(60, Math.max(0, parseFloat($('pReserve').value) || 0));
+  st.snacks = $('pSnacks').checked;
+  saveR(); renderPlan(); bRender();
+}));
+$('pGen').onclick = () => generatePlan(false);
+$('pToShop').onclick = () => {
+  if (!R.plan) return;
+  if (Object.keys(R.picked).length && !confirm('Înlocuiești lista de cumpărături actuală cu rețetele din meniu?')) return;
+  const count = {};
+  R.plan.days.forEach(d => activeSlots().forEach(([k]) => { if (rById(d[k])) count[d[k]] = (count[d[k]] || 0) + 1; }));
+  R.picked = {}; R.checked = {};
+  for (const [id, n] of Object.entries(count)) R.picked[id] = n * R.settings.persons;
+  saveR(); rRenderAll(); rSub('shop'); toast('Meniul săptămânii e pe lista de cumpărături 🛒');
+};
+
+/* ---- shopping list ---- */
+function buildShopList() {
+  const items = {};
+  for (const [id, servings] of Object.entries(R.picked)) {
+    const r = rById(id); if (!r) continue;
+    const scale = servings / r.servings;
+    r.ingredients.forEach(line => {
+      const p = parseIngredient(line);
+      const key = normName(p.name) + '|' + (p.qty === null ? '' : p.unit);
+      const it = items[key] ||= {name: p.name, unit: p.unit, qty: p.qty === null ? null : 0, from: new Set()};
+      if (p.qty !== null && it.qty !== null) it.qty += p.qty * scale;
+      it.from.add(r.name);
+    });
+  }
+  return Object.entries(items).map(([key, it]) => ({key, ...it, from: [...it.from]})).sort((a, b) => a.name.localeCompare(b.name));
+}
+const itemText = it => (it.qty !== null ? fmtQty(it.qty) + (it.unit ? ' ' + unitLabel(it.unit, it.qty) : '') + ' ' : '') + it.name;
+const shopCost = () => Object.entries(R.picked).reduce((s, [id, sv]) => { const r = rById(id); return s + (r && r.cost ? r.cost * sv / r.servings : 0); }, 0);
+
+function rRenderShop() {
+  const ids = Object.keys(R.picked).filter(id => rById(id));
+  $('rShopCount').textContent = ids.length;
+  const est = shopCost();
+  $('rShopCost').textContent = ids.length ? `Cost estimat: ≈ ${lei(est)}` : '';
+  if (!$('rBuyAmount').dataset.touched) $('rBuyAmount').value = est ? est.toFixed(2) : '';
+  $('rPicked').innerHTML = ids.length ? ids.map(id => {
+    const r = rById(id);
+    return `<div class="picked"><strong style="flex:1">${esc(r.name)}</strong><span class="meta">Porții</span>
+      <input type="number" min="1" value="${R.picked[id]}" data-serv="${id}"><button class="ghost small danger" data-unpick="${id}">Scoate</button></div>`;
+  }).join('') : '<div class="empty">Adaugă rețete din fila Rețete cu „+ Lista de cumpărături” sau din Meniu.</div>';
+  const list = buildShopList();
+  $('rShop').innerHTML = list.length ? list.map(it =>
+    `<li class="${R.checked[it.key] ? 'done' : ''}"><input type="checkbox" data-key="${esc(it.key)}" ${R.checked[it.key] ? 'checked' : ''}>
+      <span>${esc(itemText(it))}</span><small>${esc(it.from.join(', '))}</small></li>`).join('')
+    : '<li class="empty" style="display:block">Lista de cumpărături e goală.</li>';
+}
+$('rPicked').addEventListener('change', ev => {
+  const id = ev.target.dataset.serv, v = parseInt(ev.target.value, 10);
+  if (id && v > 0) { R.picked[id] = v; saveR(); rRenderShop(); }
+});
+$('rPicked').addEventListener('click', ev => {
+  const id = ev.target.dataset.unpick; if (!id) return;
+  delete R.picked[id]; saveR(); rRenderAll();
+});
+$('rShop').addEventListener('change', ev => {
+  const k = ev.target.dataset.key; if (!k) return;
+  if (ev.target.checked) R.checked[k] = true; else delete R.checked[k];
+  saveR(); rRenderShop();
+});
+$('rUncheck').onclick = () => { R.checked = {}; saveR(); rRenderShop(); };
+$('rClear').onclick = () => { if (confirm('Scoți toate rețetele de pe lista de cumpărături?')) { R.picked = {}; R.checked = {}; saveR(); rRenderAll(); toast('Lista a fost golită'); } };
+$('rCopy').onclick = async () => {
+  const text = buildShopList().filter(it => !R.checked[it.key]).map(it => '- ' + itemText(it)).join('\n');
+  try { await navigator.clipboard.writeText(text); toast('Lista a fost copiată'); } catch { prompt('Copiază lista:', text); }
+};
+
+/* ---- "I did the shopping" -> expense in Budget ---- */
+$('rBuyDate').value = today();
+$('rBuyAmount').addEventListener('input', () => { $('rBuyAmount').dataset.touched = '1'; });
+$('rBuy').onclick = () => {
+  const amount = parseFloat($('rBuyAmount').value);
+  if (!(amount > 0)) { toast('Scrie suma plătită'); $('rBuyAmount').focus(); return; }
+  const names = Object.keys(R.picked).map(id => rById(id)?.name).filter(Boolean);
+  const cat = foodCategory();
+  const date = $('rBuyDate').value || today();
+  B.expenses.push({id: Date.now(), date, amount, category: cat, source: 'retete',
+    note: '🛒 Cumpărături' + (names.length ? ': ' + names.slice(0, 4).join(', ') + (names.length > 4 ? ` +${names.length - 4}` : '') : '')});
+  saveB();
+  $('bMonth').value = ym(date);
+  delete $('rBuyAmount').dataset.touched;
+  bRender(); renderPlan(); renderHome();
+  toast(`${money(amount)} trecut în Buget la „${cat}”`);
+  if (names.length && confirm('Cumpărăturile au fost trecute în Buget. Golesc lista de cumpărături?')) { R.picked = {}; R.checked = {}; saveR(); }
+  rRenderAll();
+};
+
+function rRenderAll() { rRenderResults(); rRenderShop(); renderPlan(); }
+
+/* ================= Backup ================= */
+$('exportAll').onclick = () => download(`daily-hub-backup-${today()}.json`, JSON.stringify({app: 'daily-hub', version: 1, budget: B, recipes: R}, null, 2), 'application/json');
+$('importAll').onclick = () => $('importFile').click();
+$('importFile').onchange = async ev => {
+  const file = ev.target.files[0]; if (!file) return;
+  try {
+    const d = JSON.parse(await file.text());
+    // accepts a combined backup, or a backup from one of the old single apps
+    const nb = d.budget || (Array.isArray(d.expenses) ? d : null);
+    const nr = d.recipes && !Array.isArray(d.recipes) ? d.recipes : (Array.isArray(d.recipes) ? d : null);
+    const parts = [nb && 'buget', nr && 'rețete'].filter(Boolean);
+    if (!parts.length) throw new Error('bad file');
+    if (!confirm(`Asta va înlocui datele actuale (${parts.join(', ')}). Continui?`)) return;
+    if (nb) { B = nb; saveB(); }
+    if (nr) { R = {picked: {}, checked: {}, ...nr}; saveR(); }
+    rMigrate(); renderEverything(); toast('Backup restaurat');
+  } catch { toast('Fișierul nu este un backup valid'); }
+  ev.target.value = '';
+};
+
+/* ================= Start ================= */
+rMigrate();
+function renderEverything() { bRenderCats(); bRender(); rRenderAll(); renderHome(); }
+renderEverything();
+const VIEWS = ['home', 'budget', 'recipes'];
+const fromHash = () => { const h = location.hash.slice(1); return VIEWS.includes(h) ? h : 'home'; };
+// Back/Forward buttons and typed URLs change only the hash: follow them
+window.addEventListener('hashchange', () => { const v = fromHash(); if (v !== view) go(v); });
+go(fromHash());
+
+/* ================= Phone app (PWA) ================= */
+// Offline copy of the app; only works when served over https (or localhost), not from a file.
+if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+// Ask the browser not to clear our data when the phone runs low on space.
+try { navigator.storage?.persist?.(); } catch {}
+</script>
+</body>
+</html>
